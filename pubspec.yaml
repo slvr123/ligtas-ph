@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: '>=3.3.3 <4.0.0' # Updated to a more compatible range
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -30,22 +30,23 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  geolocator: ^10.1.0  # For GPS location
-  geocoding: ^2.1.1     # For address ↔ coordinates conversion
+  geolocator: ^11.0.0  # For GPS location
+  geocoding: ^3.0.0   # For address ↔ coordinates conversion
   google_maps_flutter: ^2.5.0  # For interactive maps
   google_fonts: ^6.2.1
-  url_launcher: ^6.3.0 
+  url_launcher: ^6.2.5
   timeago: ^3.6.1
 
   #sam
   cupertino_icons: ^1.0.8
-  firebase_core: ^4.1.1
-  firebase_auth: ^6.1.0
-  cloud_firestore: ^6.0.2
+  firebase_core: ^2.27.0
+  firebase_auth: ^4.17.8
+  cloud_firestore: ^4.15.8
+  get: ^4.6.6
   
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
- 
+  
 
 dev_dependencies:
   flutter_test:
@@ -56,7 +57,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -99,3 +100,4 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
