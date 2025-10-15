@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-
 class AuthTextField extends StatelessWidget {
   final String label;
   final bool isPassword;
   final TextEditingController? controller; // To control the text field
   final bool hasError; // To indicate if there's an error
-
 
   const AuthTextField({
     super.key,
@@ -15,7 +13,6 @@ class AuthTextField extends StatelessWidget {
     this.controller,
     this.hasError = false,
   });
-
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +46,9 @@ class AuthTextField extends StatelessWidget {
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
               borderSide: BorderSide(
-                color: hasError ? Colors.redAccent : const Color(0xFF374151), // slate-700
+                color: hasError
+                    ? Colors.redAccent
+                    : const Color(0xFF374151), // slate-700
                 width: 1,
               ),
             ),
@@ -74,6 +73,3 @@ class AuthTextField extends StatelessWidget {
     );
   }
 }
-
-
-
