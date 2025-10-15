@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1025608025233",
+    "project_id": "ligtas-ph-dev",
+    "storage_bucket": "ligtas-ph-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1025608025233:android:e554d961a7bf198d47eb30",
+        "android_client_info": {
+          "package_name": "com.example.my_clean_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbcfHI59kwmU4zwi-Liilxq5GEiLgPxLQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

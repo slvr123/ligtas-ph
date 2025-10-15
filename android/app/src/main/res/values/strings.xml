@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Placeholder used by AndroidManifest meta-data; replace with your real key if you use Maps -->
+    <string name="google_maps_api_key">YOUR_ANDROID_MAPS_API_KEY</string>
+</resources>
