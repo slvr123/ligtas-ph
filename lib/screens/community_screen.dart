@@ -70,9 +70,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
               // Header
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFb91c1c),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFb91c1c),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Row(
                   children: [
@@ -234,6 +234,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       color: Colors.white,
                                       fontWeight: FontWeight.w500,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
@@ -393,72 +394,118 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
 
           // Posts List
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _selectedCategory == 'all'
-                  ? _communityService.getAllPosts()
-                  : _communityService.getPostsByCategory(_selectedCategory, _userLocation),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+// In the StreamBuilder section of your build method, update this part:
 
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Error: ${snapshot.error}'),
-                  );
-                }
+// Posts List
+Expanded(
+  child: StreamBuilder<QuerySnapshot>(
+    stream: _selectedCategory == 'all'
+        ? _communityService.getAllPosts()
+        : _communityService.getPostsByCategory(_selectedCategory, _userLocation),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.forum_outlined,
-                          size: 80,
-                          color: Colors.white.withOpacity(0.3),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No posts yet',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.white.withOpacity(0.5),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Be the first to report!',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white.withOpacity(0.3),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final posts = snapshot.data!.docs;
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    setState(() {});
-                  },
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: posts.length,
-                    itemBuilder: (context, index) {
-                      final post = posts[index];
-                      final data = post.data() as Map<String, dynamic>;
-                      return _buildPostCard(post.id, data);
-                    },
-                  ),
-                );
-              },
-            ),
+      if (snapshot.hasError) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 60, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                'Error loading posts',
+                style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.7)),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${snapshot.error}',
+                style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5)),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
+        );
+      }
+
+      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.forum_outlined,
+                size: 80,
+                color: Colors.white.withOpacity(0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No posts yet',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white.withOpacity(0.5),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Be the first to report!',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white.withOpacity(0.3),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // ✅ FILTER OUT DELETED/RESOLVED POSTS LOCALLY
+      final posts = snapshot.data!.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['status'] == 'active';
+      }).toList();
+
+      if (posts.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.forum_outlined,
+                size: 80,
+                color: Colors.white.withOpacity(0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No active posts',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return RefreshIndicator(
+        onRefresh: () async {
+          setState(() {});
+        },
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final post = posts[index];
+            final data = post.data() as Map<String, dynamic>;
+            return _buildPostCard(post.id, data);
+          },
+        ),
+      );
+    },
+  ),
+),
         ],
       ),
     );
@@ -481,7 +528,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // Header - FIXED OVERFLOW
             Row(
               children: [
                 CircleAvatar(
@@ -502,6 +549,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                       Row(
                         children: [
@@ -511,11 +559,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             color: Colors.white.withOpacity(0.5),
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            data['location'] ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withOpacity(0.5),
+                          Flexible(
+                            child: Text(
+                              data['location'] ?? 'Unknown',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withOpacity(0.5),
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -571,6 +622,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 fontSize: 14,
                 color: Colors.white70,
               ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
 
             const SizedBox(height: 12),
@@ -598,7 +651,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   style: const TextStyle(color: Colors.white70),
                 ),
                 const SizedBox(width: 16),
-                Icon(Icons.comment_outlined, color: Colors.white70),
+                const Icon(Icons.comment_outlined, color: Colors.white70),
                 const SizedBox(width: 8),
                 Text(
                   '${data['commentCount'] ?? 0}',
@@ -612,24 +665,32 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       if (value == 'delete') {
                         try {
                           await _communityService.deletePost(postId, data['userId']);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Post deleted')),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Post deleted')),
+                            );
+                          }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
                         }
                       } else if (value == 'resolve') {
                         try {
                           await _communityService.markAsResolved(postId, data['userId']);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Marked as resolved')),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Marked as resolved')),
+                            );
+                          }
                         } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
                         }
                       }
                     },
@@ -679,4 +740,3 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 }
-

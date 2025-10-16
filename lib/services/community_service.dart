@@ -69,11 +69,10 @@ class CommunityService {
         .snapshots();
   }
 
-  // Get all posts (fallback if location filter doesn't work)
+  // ✅ FIXED: Get all posts - simplified query that doesn't need index
   Stream<QuerySnapshot> getAllPosts() {
     return _firestore
         .collection('community_posts')
-        .where('status', isEqualTo: 'active')
         .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots();
@@ -81,8 +80,6 @@ class CommunityService {
 
   // Get posts by category
   Stream<QuerySnapshot> getPostsByCategory(String category, String location) {
-    String city = location.split(',')[0].trim();
-    
     return _firestore
         .collection('community_posts')
         .where('category', isEqualTo: category)
@@ -253,4 +250,3 @@ class CommunityService {
         .snapshots();
   }
 }
-
