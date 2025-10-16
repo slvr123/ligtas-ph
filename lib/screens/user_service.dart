@@ -37,7 +37,8 @@ class UserService {
   // Get user location from Firestore
   Future<Map<String, dynamic>?> getUserLocation() async {
     if (currentUserId == null) {
-      throw Exception('No user logged in');
+      // Return null or throw a less severe error if the calling code handles it
+      return null;
     }
 
     try {
@@ -64,7 +65,31 @@ class UserService {
       return null; // No location saved yet
     } catch (e) {
       print('Error getting location: $e');
+      // Re-throwing as a more user-friendly Exception is generally a good practice
       throw Exception('Failed to get location: $e');
+    }
+  }
+  
+  // 🆕 NEW METHOD: Get all profile data from Firestore for the Profile Screen
+  Future<Map<String, dynamic>?> getUserProfile() async {
+    if (currentUserId == null) {
+      return null;
+    }
+
+    try {
+      DocumentSnapshot doc = await _firestore.collection('users')
+          .doc(currentUserId)
+          .get();
+
+      if (doc.exists) {
+        // Return the entire document data map
+        return doc.data() as Map<String, dynamic>;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print("Error fetching user profile: $e");
+      throw Exception("Failed to fetch user profile: $e");
     }
   }
 

@@ -1,3 +1,4 @@
+// lib/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:disaster_awareness_app/screens/alerts_screen.dart';
@@ -10,6 +11,9 @@ import 'package:disaster_awareness_app/widgets/disaster_alert_card.dart';
 import 'package:disaster_awareness_app/widgets/home_grid_button.dart';
 import 'package:disaster_awareness_app/widgets/sos_button.dart';
 import 'location_setup_screen.dart';
+// NEW IMPORTS:
+import 'package:disaster_awareness_app/screens/profile_screen.dart'; 
+import 'package:disaster_awareness_app/screens/settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String location;
@@ -108,6 +112,20 @@ class HomeScreen extends StatelessWidget {
             onSelected: (value) {
               if (value == 'logout') {
                 _logout(context);
+              } else if (value == 'profile') {
+                Future.microtask(() {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  );
+                });
+              } else if (value == 'settings') {
+                Future.microtask(() {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                });
               }
             },
             itemBuilder: (context) => [
@@ -217,8 +235,8 @@ class HomeScreen extends StatelessWidget {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const CommunityScreen()),
+                ),
               ),
-            ),
             ],
           ),
         ],
