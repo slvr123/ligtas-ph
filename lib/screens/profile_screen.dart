@@ -81,7 +81,7 @@ class ProfileScreen extends StatelessWidget {
 
                 Card(
                   elevation: 0,
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   child: ListTile(
                   leading: const Icon(Icons.phone_enabled_outlined),
                   title: const Text('View / Manage Emergency Contacts'),
@@ -104,7 +104,7 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildInfoTile(IconData icon, String label, String value, ThemeData theme) {
     return Card(
       elevation: 0,
-      color: theme.colorScheme.surfaceVariant.withOpacity(0.4),
+      color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.4),
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         leading: Icon(icon, color: theme.colorScheme.primary),

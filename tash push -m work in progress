@@ -1,0 +1,26 @@
+* [33m2bc8deb[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add vibration and torch_light dependencies
+* [33mbc85be4[m Convert SosButton to StatefulWidget with SOS features
+[31m|[m * [33m07e2628[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Update on community screen and service (working na)
+[31m|[m[31m/[m  
+*   [33maa93eff[m added profile_screen, settings_screen, and update user_serveces
+[33m|[m[34m\[m  
+[33m|[m *   [33mb3a85ea[m Merge pull request #3 from renzlcnz/renzlcnz-patch-2
+[33m|[m [35m|[m[36m\[m  
+[33m|[m [35m|[m * [33m074b9bc[m Update pubspec.yaml
+[33m|[m * [36m|[m   [33m593188e[m Merge pull request #2 from renzlcnz/renzlcnz-patch-3
+[33m|[m [1;31m|[m[1;32m\[m [36m\[m  
+[33m|[m [1;31m|[m * [36m|[m [33mea7aba6[m Update user_service.dart
+[33m|[m [1;31m|[m [36m|[m[36m/[m  
+[33m|[m * [36m|[m   [33md537a83[m Merge pull request #1 from renzlcnz/renzlcnz-patch-4
+[33m|[m [1;33m|[m[1;34m\[m [36m\[m  
+[33m|[m [1;33m|[m * [36m|[m [33m3b93a05[m Clean up AuthTextField code formatting
+[33m|[m [1;33m|[m [36m|[m[36m/[m  
+[33m|[m * [36m|[m   [33m030e919[m Merge pull request #4 from renzlcnz/renzlcnz-patch-1
+[33m|[m [36m|[m[1;36m\[m [36m\[m  
+[33m|[m [36m|[m [1;36m|[m[36m/[m  
+[33m|[m [36m|[m[36m/[m[1;36m|[m   
+[33m|[m [36m|[m * [33md73b385[m Update forgot_password_page.dart
+[33m|[m [36m|[m[36m/[m  
+* [36m/[m [33mcf1d179[m Settings and Profile pero balak ko pa dagdagan
+[36m|[m[36m/[m  
+* [33mbb56075[m Initial commit

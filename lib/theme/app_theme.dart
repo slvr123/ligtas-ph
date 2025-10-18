@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static final ColorScheme _darkColors = const ColorScheme.dark(
+  static const ColorScheme _darkColors = ColorScheme.dark(
     primary: Color(0xFFb91c1c),
     secondary: Color(0xFF1f2937),
     error: Colors.redAccent,
