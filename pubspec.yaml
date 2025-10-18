@@ -37,7 +37,8 @@ dependencies:
   url_launcher: ^6.2.5
   timeago: ^3.6.1
 
-  #sam
+  http: ^1.1.0          # For fetching RSS feeds
+  xml: ^6.3.0           # For parsing RSS XML
   cupertino_icons: ^1.0.8
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.8

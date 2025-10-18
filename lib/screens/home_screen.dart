@@ -11,7 +11,6 @@ import 'package:disaster_awareness_app/widgets/disaster_alert_card.dart';
 import 'package:disaster_awareness_app/widgets/home_grid_button.dart';
 import 'package:disaster_awareness_app/widgets/sos_button.dart';
 import 'location_setup_screen.dart';
-// NEW IMPORTS:
 import 'package:disaster_awareness_app/screens/profile_screen.dart'; 
 import 'package:disaster_awareness_app/screens/settings_screen.dart';
 
@@ -225,8 +224,11 @@ class HomeScreen extends StatelessWidget {
               HomeGridButton(
                 text: 'News Updates',
                 icon: Icons.newspaper_rounded,
-                color: const Color(0xFFea580c), // Orange for information
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NewsUpdatesScreen())),
+                color: const Color(0xFFea580c),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => NewsUpdatesScreen(location: location)),
+                ),
               ),
               HomeGridButton(
                 text: 'Community',

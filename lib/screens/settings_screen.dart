@@ -14,7 +14,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // solution (like Provider or Riverpod) or SharedPreferences to manage these.
   bool _alertNotifications = true;
   bool _locationTracking = true;
-  String _alertTone = 'Loud Chime';
+  final String _alertTone = 'Loud Chime';
 
   @override
   Widget build(BuildContext context) {

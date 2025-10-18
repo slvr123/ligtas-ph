@@ -7,12 +7,12 @@ import 'app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ADD THIS CHECK
+  
   if (Firebase.apps.isEmpty) {
     if (kIsWeb) {
       await Firebase.initializeApp(
         options: const FirebaseOptions(
-          apiKey: "AIzaSyCgRd6vyUsLrsNvfNkV_vlp7WJnrRZ51Zo",
+          apiKey: "AIzaSyCgRd6vyUsLrsNvfNkV_vl`p7WJnrRZ51Zo",
           authDomain: "ligtas-ph-dev.firebaseapp.com",
           projectId: "ligtas-ph-dev",
           storageBucket: "ligtas-ph-dev.firebasestorage.app",

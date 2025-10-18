@@ -38,11 +38,11 @@ class DisasterReadyApp extends StatelessWidget {
         cardColor: const Color(0xFF1f2937),
         fontFamily: 'Inter',
         useMaterial3: true,
-        colorScheme: ColorScheme.dark(
-          primary: const Color(0xFFb91c1c),
-          secondary: const Color(0xFFdc2626),
-          error: const Color(0xFFef4444),
-          surface: const Color(0xFF1f2937),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFb91c1c),
+          secondary: Color(0xFFdc2626),
+          error: Color(0xFFef4444),
+          surface: Color(0xFF1f2937),
           onSurface: Colors.white,
         ),
         textTheme: const TextTheme(
