@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:disaster_awareness_app/services/news_service.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class NewsUpdatesScreen extends StatefulWidget {
   final String location;
@@ -23,10 +22,26 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
   String _error = '';
   String _selectedFilter = 'all';
 
+  // Disaster categories with keywords - FOR TITLE ONLY
+  final Map<String, List<String>> _disasterCategories = {
+    'all': ['typhoon', 'bagyo', 'storm', 'earthquake', 'lindol', 'flood', 'baha', 
+            'fire', 'sunog', 'volcano', 'bulkan', 'landslide', 'guho', 'tsunami',
+            'disaster', 'sakuna', 'emergency', 'kalamidad', 'evacuate', 'likas',
+            'warning', 'babala', 'alert', 'signal', 'weather'],
+    'storm': ['typhoon', 'bagyo', 'storm', 'signal', 'habagat', 'amihan', 'wind', 'hangin'],
+    'earthquake': ['earthquake', 'lindol', 'tremor', 'aftershock', 'magnitude', 'seismic'],
+    'flood': ['flood', 'baha', 'inundation', 'overflow', 'rain', 'ulan'],
+    'fire': ['fire', 'sunog', 'blaze', 'flames'],
+    'volcano': ['volcano', 'bulkan', 'eruption', 'lava', 'ash', 'mayon', 'taal', 'pinatubo'],
+  };
+
   final List<Map<String, dynamic>> _filters = [
-    {'id': 'all', 'name': 'All News', 'icon': Icons.newspaper},
-    {'id': 'disaster', 'name': 'Disasters', 'icon': Icons.warning_amber_rounded},
-    {'id': 'weather', 'name': 'Weather', 'icon': Icons.cloud},
+    {'id': 'all', 'name': 'All Disasters', 'icon': Icons.warning_amber_rounded, 'color': Colors.red},
+    {'id': 'storm', 'name': 'Storms', 'icon': Icons.air, 'color': Colors.purple},
+    {'id': 'earthquake', 'name': 'Earthquakes', 'icon': Icons.emergency, 'color': Colors.orange},
+    {'id': 'flood', 'name': 'Floods', 'icon': Icons.water, 'color': Colors.blue},
+    {'id': 'fire', 'name': 'Fires', 'icon': Icons.local_fire_department, 'color': Colors.deepOrange},
+    {'id': 'volcano', 'name': 'Volcanoes', 'icon': Icons.terrain, 'color': Colors.brown},
   ];
 
   @override
@@ -62,19 +77,107 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
   }
 
   void _applyFilter() {
-    if (_selectedFilter == 'all') {
-      _filteredArticles = _allArticles;
-    } else if (_selectedFilter == 'disaster') {
-      _filteredArticles = _newsService.filterByKeywords(
-        _allArticles,
-        _newsService.getDisasterKeywords(),
-      );
-    } else if (_selectedFilter == 'weather') {
-      _filteredArticles = _allArticles.where((article) {
-        return article.source.toLowerCase().contains('pagasa') ||
-               article.title.toLowerCase().contains('weather') ||
-               article.description.toLowerCase().contains('weather');
-      }).toList();
+    final keywords = _disasterCategories[_selectedFilter] ?? _disasterCategories['all']!;
+    
+    // ✅ IMPROVED: Filter by TITLE only (more accurate)
+    _filteredArticles = _allArticles.where((article) {
+      final title = article.title.toLowerCase();
+      
+      // Check if title contains any disaster keywords
+      return keywords.any((keyword) => title.contains(keyword.toLowerCase()));
+    }).toList();
+
+    // ✅ ENHANCED: Multi-level location prioritization
+    if (widget.location.isNotEmpty) {
+      final locationParts = widget.location.split(',').map((e) => e.trim().toLowerCase()).toList();
+      final city = locationParts.isNotEmpty ? locationParts[0] : '';
+      final province = locationParts.length > 1 ? locationParts[1] : '';
+      
+      // Metro Manila cities
+      final metroManilaCities = [
+        'manila', 'quezon city', 'makati', 'pasay', 'taguig', 'mandaluyong',
+        'pasig', 'marikina', 'caloocan', 'valenzuela', 'malabon', 'navotas',
+        'muntinlupa', 'parañaque', 'las piñas', 'san juan', 'pateros'
+      ];
+      
+      final isMetroManila = province.contains('metro manila') || metroManilaCities.contains(city);
+      
+      // Sort by location relevance
+      _filteredArticles.sort((a, b) {
+        final aContent = '${a.title} ${a.description}'.toLowerCase();
+        final bContent = '${b.title} ${b.description}'.toLowerCase();
+        
+        // Level 1: Exact city match
+        final aHasCity = aContent.contains(city);
+        final bHasCity = bContent.contains(city);
+        
+        if (aHasCity && !bHasCity) return -1;
+        if (!aHasCity && bHasCity) return 1;
+        
+        // Level 2: Province match
+        final aHasProvince = province.isNotEmpty && aContent.contains(province);
+        final bHasProvince = province.isNotEmpty && bContent.contains(province);
+        
+        if (aHasProvince && !bHasProvince) return -1;
+        if (!aHasProvince && bHasProvince) return 1;
+        
+        // Level 3: Metro Manila cities
+        if (isMetroManila) {
+          final aHasMetroCity = metroManilaCities.any((c) => aContent.contains(c));
+          final bHasMetroCity = metroManilaCities.any((c) => bContent.contains(c));
+          
+          if (aHasMetroCity && !bHasMetroCity) return -1;
+          if (!aHasMetroCity && bHasMetroCity) return 1;
+        }
+        
+        // Level 4: Nearby regions
+        final nearbyKeywords = _getNearbyRegionKeywords(city, province);
+        final aHasNearby = nearbyKeywords.any((k) => aContent.contains(k));
+        final bHasNearby = nearbyKeywords.any((k) => bContent.contains(k));
+        
+        if (aHasNearby && !bHasNearby) return -1;
+        if (!aHasNearby && bHasNearby) return 1;
+        
+        // Level 5: Sort by date (newest first)
+        return b.publishedDate.compareTo(a.publishedDate);
+      });
+    }
+  }
+  
+  List<String> _getNearbyRegionKeywords(String city, String province) {
+    final Map<String, List<String>> nearbyRegions = {
+      'manila': ['ncr', 'luzon', 'metro manila', 'rizal', 'cavite', 'laguna'],
+      'quezon city': ['ncr', 'luzon', 'metro manila', 'rizal'],
+      'makati': ['ncr', 'luzon', 'metro manila', 'taguig', 'pasay'],
+      'muntinlupa': ['ncr', 'luzon', 'metro manila', 'laguna', 'cavite'],
+      'cebu': ['cebu', 'visayas', 'central visayas', 'mactan', 'mandaue'],
+      'davao': ['davao', 'mindanao', 'southern mindanao'],
+      'cagayan de oro': ['northern mindanao', 'misamis oriental', 'mindanao'],
+    };
+    
+    return nearbyRegions[city.toLowerCase()] ?? [province.toLowerCase()];
+  }
+
+  String _getDisasterType(NewsArticle article) {
+    final title = article.title.toLowerCase();
+    
+    if (_disasterCategories['storm']!.any((k) => title.contains(k))) return 'Storm';
+    if (_disasterCategories['earthquake']!.any((k) => title.contains(k))) return 'Earthquake';
+    if (_disasterCategories['flood']!.any((k) => title.contains(k))) return 'Flood';
+    if (_disasterCategories['fire']!.any((k) => title.contains(k))) return 'Fire';
+    if (_disasterCategories['volcano']!.any((k) => title.contains(k))) return 'Volcano';
+    
+    return 'Disaster';
+  }
+
+  Color _getDisasterColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'storm': return Colors.purple.shade700;
+      case 'earthquake': return Colors.orange.shade700;
+      case 'flood': return Colors.blue.shade700;
+      case 'fire': return Colors.deepOrange.shade700;
+      case 'volcano': return Colors.brown.shade700;
+      default: return Colors.red.shade700;
     }
   }
 
@@ -284,13 +387,48 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
   }
 
   Widget _buildNewsCard(NewsArticle article) {
-    final timeAgo = timeago.format(article.publishedDate);
+    // ✅ FIXED: Show actual date instead of "a moment ago"
+    final publishedDate = article.publishedDate;
+    final now = DateTime.now();
+    final difference = now.difference(publishedDate);
+    
+    String dateDisplay;
+    
+    if (difference.inDays == 0) {
+      // Today - show time
+      final hour = publishedDate.hour.toString().padLeft(2, '0');
+      final minute = publishedDate.minute.toString().padLeft(2, '0');
+      dateDisplay = 'Today at $hour:$minute';
+    } else if (difference.inDays == 1) {
+      // Yesterday
+      dateDisplay = 'Yesterday';
+    } else if (difference.inDays < 7) {
+      // Within a week - show days ago
+      dateDisplay = '${difference.inDays} days ago';
+    } else {
+      // Older - show actual date
+      final month = _getMonthName(publishedDate.month);
+      dateDisplay = '$month ${publishedDate.day}, ${publishedDate.year}';
+    }
+    
+    final disasterType = _getDisasterType(article);
+    final disasterColor = _getDisasterColor(disasterType);
+    
+    // Check if local news
+    final locationKeywords = widget.location.split(',').map((e) => e.trim().toLowerCase()).toList();
+    final isLocalNews = locationKeywords.any((keyword) => 
+      article.title.toLowerCase().contains(keyword) || 
+      article.description.toLowerCase().contains(keyword)
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       color: const Color(0xFF1f2937),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: isLocalNews 
+            ? BorderSide(color: Colors.yellow.shade700, width: 2)
+            : BorderSide.none,
       ),
       child: InkWell(
         onTap: () => _launchUrl(article.url),
@@ -304,34 +442,80 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(12),
                 ),
-                child: Image.network(
-                  article.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
+                child: Stack(
+                  children: [
+                    Image.network(
+                      article.imageUrl!,
                       height: 200,
-                      color: const Color(0xFF374151),
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          size: 50,
-                          color: Colors.white38,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          color: const Color(0xFF374151),
+                          child: const Center(
+                            child: Icon(
+                              Icons.image_not_supported,
+                              size: 50,
+                              color: Colors.white38,
+                            ),
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 200,
+                          color: const Color(0xFF374151),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      },
+                    ),
+                    // Location badge on image
+                    if (isLocalNews)
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.yellow.shade700,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'YOUR AREA',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    );
-                  },
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      color: const Color(0xFF374151),
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  },
+                  ],
                 ),
               ),
 
@@ -341,9 +525,30 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Source and Time
+                  // Source, Disaster Type, and Date
                   Row(
                     children: [
+                      // Disaster Type Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: disasterColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          disasterType.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      // Source Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -362,18 +567,20 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const Spacer(),
+                      // ✅ NEW: Show actual date instead of "a moment ago"
                       Icon(
-                        Icons.access_time,
-                        size: 14,
+                        Icons.calendar_today,
+                        size: 12,
                         color: Colors.white.withOpacity(0.5),
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        timeAgo,
+                        dateDisplay,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 11,
+                          color: Colors.white.withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -416,7 +623,7 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
                       TextButton.icon(
                         onPressed: () => _launchUrl(article.url),
                         icon: const Icon(Icons.open_in_new, size: 16),
-                        label: const Text('Read More'),
+                        label: const Text('Read Full Article'),
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFFea580c),
                         ),
@@ -431,14 +638,30 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
       ),
     );
   }
+  
+  // Helper function to get month name
+  String _getMonthName(int month) {
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+    return months[month - 1];
+  }
 
   Color _getSourceColor(String source) {
-    if (source.toLowerCase().contains('pagasa')) {
+    final sourceLower = source.toLowerCase();
+    if (sourceLower.contains('pagasa')) {
       return Colors.blue.shade700;
-    } else if (source.toLowerCase().contains('gma')) {
+    } else if (sourceLower.contains('gma')) {
       return Colors.orange.shade700;
-    } else if (source.toLowerCase().contains('pna')) {
+    } else if (sourceLower.contains('pna') || sourceLower.contains('philippine news')) {
       return Colors.green.shade700;
+    } else if (sourceLower.contains('rappler')) {
+      return Colors.red.shade700;
+    } else if (sourceLower.contains('inquirer')) {
+      return Colors.indigo.shade700;
+    } else if (sourceLower.contains('abs') || sourceLower.contains('cbn')) {
+      return Colors.cyan.shade700;
     }
     return Colors.grey.shade700;
   }
