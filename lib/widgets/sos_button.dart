@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';
 import 'package:torch_light/torch_light.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class SosButton extends StatefulWidget {
   const SosButton({super.key});
@@ -16,19 +17,28 @@ class _SosButtonState extends State<SosButton> {
   bool _isHolding = false;
   double _sliderPosition = 0.0;
 
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
   @override
   void dispose() {
     _holdTimer?.cancel();
-    _stopVibration(); // Ensure everything is off when the widget is removed
+    _stopVibration();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
   Future<void> _startContinuousSOS() async {
     if (_isVibrating || !mounted) return;
 
+    try {
+      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+      await _audioPlayer.play(AssetSource('audio/emergency_alert.mp3'));
+    } catch (e) {
+      print("Error playing audio: $e");
+    }
+
     bool? hasVibrator = await Vibration.hasVibrator();
     bool hasFlashlight = await _isFlashlightAvailable();
-
     if (hasVibrator != true || !hasFlashlight) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -45,40 +55,31 @@ class _SosButtonState extends State<SosButton> {
       _sliderPosition = 0.0;
     });
 
-    _sosSignalLoop();
+    _runSosCycle();
   }
 
-  // --- THIS IS THE MODIFIED LOOP WITH FASTER TIMING ---
-  Future<void> _sosSignalLoop() async {
-    while (_isVibrating) {
-      // --- 'S' Pattern (short-short-short) ---
-      for (int i = 0; i < 3; i++) {
-        if (!_isVibrating) break;
-        await _pulse(const Duration(milliseconds: 150)); // Short pulse
-        await Future.delayed(const Duration(milliseconds: 150)); // Faster pause
-      }
-      await Future.delayed(
-          const Duration(milliseconds: 300)); // Faster pause between letters
+  Future<void> _runSosCycle() async {
+    if (!_isVibrating) return;
 
-      // --- 'O' Pattern (long-long-long) ---
-      for (int i = 0; i < 3; i++) {
-        if (!_isVibrating) break;
-        await _pulse(const Duration(milliseconds: 500)); // Long pulse
-        await Future.delayed(const Duration(milliseconds: 150)); // Faster pause
-      }
-      await Future.delayed(
-          const Duration(milliseconds: 300)); // Faster pause between letters
-
-      // --- 'S' Pattern (short-short-short) ---
-      for (int i = 0; i < 3; i++) {
-        if (!_isVibrating) break;
-        await _pulse(const Duration(milliseconds: 150)); // Short pulse
-        await Future.delayed(const Duration(milliseconds: 150)); // Faster pause
-      }
-
-      // --- SHORTER PAUSE AT THE END OF THE LOOP ---
-      await Future.delayed(const Duration(milliseconds: 500));
+    // This is now a rapid, continuous flashing pattern.
+    // Each pulse is 300ms ON, followed by a 300ms OFF pause.
+    for (int i = 0; i < 9; i++) {
+      if (!_isVibrating) break;
+      await _pulse(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 300));
     }
+
+    if (!_isVibrating) {
+      _cleanUp();
+      return;
+    }
+
+    // --- THIS IS THE CHANGE ---
+    // The final delay has been removed to make the loop more continuous.
+    // await Future.delayed(const Duration(milliseconds: 300));
+
+    // After the pause, call this function again to start the next cycle.
+    _runSosCycle();
   }
 
   Future<void> _pulse(Duration duration) async {
@@ -90,11 +91,16 @@ class _SosButtonState extends State<SosButton> {
   }
 
   Future<void> _stopVibration() async {
+    await _audioPlayer.stop();
     if (mounted) {
       setState(() {
         _isVibrating = false;
       });
     }
+    _cleanUp();
+  }
+
+  Future<void> _cleanUp() async {
     await Vibration.cancel();
     await _turnOffFlashlight();
   }
@@ -102,7 +108,7 @@ class _SosButtonState extends State<SosButton> {
   Future<bool> _isFlashlightAvailable() async {
     try {
       return await TorchLight.isTorchAvailable();
-    } catch (e) {
+    } on Exception catch (e) {
       print("Could not check for flashlight: $e");
       return false;
     }
@@ -111,7 +117,7 @@ class _SosButtonState extends State<SosButton> {
   Future<void> _turnOnFlashlight() async {
     try {
       await TorchLight.enableTorch();
-    } catch (e) {
+    } on Exception catch (e) {
       print("Could not enable flashlight: $e");
     }
   }
@@ -119,7 +125,7 @@ class _SosButtonState extends State<SosButton> {
   Future<void> _turnOffFlashlight() async {
     try {
       await TorchLight.disableTorch();
-    } catch (e) {
+    } on Exception catch (e) {
       print("Could not disable flashlight: $e");
     }
   }
@@ -181,14 +187,12 @@ class _SosButtonState extends State<SosButton> {
       child: Stack(
         children: [
           const Center(
-            child: Text(
-              'SLIDE TO STOP',
-              style: TextStyle(
-                  color: Colors.white54,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  letterSpacing: 1.2),
-            ),
+            child: Text('SLIDE TO STOP',
+                style: TextStyle(
+                    color: Colors.white54,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    letterSpacing: 1.2)),
           ),
           AnimatedPositioned(
             duration: const Duration(milliseconds: 100),
