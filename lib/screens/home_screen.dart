@@ -197,6 +197,7 @@ class HomeScreen extends StatelessWidget {
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
             children: [
+              // Top row: Alerts, News Updates
               HomeGridButton(
                 text: 'Alerts',
                 icon: Icons.warning_amber_rounded,
@@ -204,11 +205,31 @@ class HomeScreen extends StatelessWidget {
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlertsScreen(location: location))),
               ),
               HomeGridButton(
+                text: 'News Updates',
+                icon: Icons.newspaper_rounded,
+                color: const Color(0xFFea580c),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => NewsUpdatesScreen(location: location)),
+                ),
+              ),
+              // Middle row: Community, Emergency Hotlines
+              HomeGridButton(
+                text: 'Community',
+                icon: Icons.people_alt_rounded,
+                color: const Color(0xFF0d9488),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
+                ),
+              ),
+              HomeGridButton(
                 text: 'Emergency Hotlines',
                 icon: Icons.phone_in_talk_rounded,
                 color: const Color(0xFF1d4ed8), // Blue for communication
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HotlinesScreen(location: location))),
               ),
+              // Bottom row: Safety Checklist, First Aid & Safety
               HomeGridButton(
                 text: 'Safety Checklist',
                 icon: Icons.checklist_rtl_rounded,
@@ -220,24 +241,6 @@ class HomeScreen extends StatelessWidget {
                 icon: Icons.health_and_safety_rounded,
                 color: const Color(0xFF7e22ce), // Purple for health
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthSafetyScreen())),
-              ),
-              HomeGridButton(
-                text: 'News Updates',
-                icon: Icons.newspaper_rounded,
-                color: const Color(0xFFea580c),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => NewsUpdatesScreen(location: location)),
-                ),
-              ),
-              HomeGridButton(
-                text: 'Community',
-                icon: Icons.people_alt_rounded,
-                color: const Color(0xFF0d9488),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CommunityScreen()),
-                ),
               ),
             ],
           ),

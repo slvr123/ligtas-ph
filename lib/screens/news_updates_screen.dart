@@ -32,7 +32,7 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
     'earthquake': ['earthquake', 'lindol', 'tremor', 'aftershock', 'magnitude', 'seismic'],
     'flood': ['flood', 'baha', 'inundation', 'overflow', 'rain', 'ulan'],
     'fire': ['fire', 'sunog', 'blaze', 'flames'],
-    'volcano': ['volcano', 'bulkan', 'eruption', 'lava', 'ash', 'mayon', 'taal', 'pinatubo'],
+    'volcano': ['volcano', 'bulkan', 'eruption', 'lava', 'mayon', 'taal', 'pinatubo'],
   };
 
   final List<Map<String, dynamic>> _filters = [
