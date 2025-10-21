@@ -21,6 +21,7 @@ class NewsService {
     }
     return url;
   }
+  
   // ✅ WORKING: Verified Philippine disaster news sources
   final List<Map<String, String>> _newsSources = [
     {
@@ -72,9 +73,107 @@ class NewsService {
     return allNews;
   }
 
+  // ✅ ENHANCED: Extract image from multiple possible locations
+  String? _extractImageUrl(xml.XmlElement item, String description) {
+    String? imageUrl;
+    
+    // Method 1: media:content
+    final mediaContent = _firstOrNull(item.findElements('media:content'));
+    if (mediaContent != null) {
+      imageUrl = mediaContent.getAttribute('url');
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        print('  📸 Found image in media:content');
+        return _normalizeUrl(imageUrl);
+      }
+    }
+    
+    // Method 2: media:thumbnail
+    final mediaThumbnail = _firstOrNull(item.findElements('media:thumbnail'));
+    if (mediaThumbnail != null) {
+      imageUrl = mediaThumbnail.getAttribute('url');
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        print('  📸 Found image in media:thumbnail');
+        return _normalizeUrl(imageUrl);
+      }
+    }
+    
+    // Method 3: enclosure (common in RSS 2.0)
+    final enclosure = _firstOrNull(item.findElements('enclosure'));
+    if (enclosure != null) {
+      final type = enclosure.getAttribute('type') ?? '';
+      if (type.startsWith('image/')) {
+        imageUrl = enclosure.getAttribute('url');
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          print('  📸 Found image in enclosure');
+          return _normalizeUrl(imageUrl);
+        }
+      }
+    }
+    
+    // Method 4: content:encoded (often contains HTML with images)
+    final contentEncoded = _firstOrNull(item.findElements('content:encoded'));
+    if (contentEncoded != null) {
+      final content = contentEncoded.innerText;
+      final imgUrl = _extractImageFromHtml(content);
+      if (imgUrl != null) {
+        print('  📸 Found image in content:encoded HTML');
+        return imgUrl;
+      }
+    }
+    
+    // Method 5: description (often contains HTML with images)
+    if (description.isNotEmpty) {
+      final imgUrl = _extractImageFromHtml(description);
+      if (imgUrl != null) {
+        print('  📸 Found image in description HTML');
+        return imgUrl;
+      }
+    }
+    
+    // Method 6: image element (RSS 2.0 channel-level, but sometimes in items)
+    final imageElement = _firstOrNull(item.findElements('image'));
+    if (imageElement != null) {
+      final urlElement = _firstOrNull(imageElement.findElements('url'));
+      if (urlElement != null) {
+        imageUrl = urlElement.innerText.trim();
+        if (imageUrl.isNotEmpty) {
+          print('  📸 Found image in image/url');
+          return _normalizeUrl(imageUrl);
+        }
+      }
+    }
+    
+    print('  ⚠️ No image found for this article');
+    return null;
+  }
+  
+  // ✅ NEW: Extract image URL from HTML content
+  String? _extractImageFromHtml(String html) {
+    if (html.isEmpty) return null;
+    
+    // Look for img tags with src attribute
+    final imgRegex = RegExp(r'<img[^>]*src=["' "'" r']([^"' "'" r']+)["' "'" r']', caseSensitive: false);
+    final match = imgRegex.firstMatch(html);
+    
+    if (match != null && match.groupCount >= 1) {
+      final url = match.group(1);
+      if (url != null && url.isNotEmpty) {
+        // Filter out tracking pixels and small images
+        if (url.contains('1x1') || url.contains('pixel') || url.contains('tracking')) {
+          return null;
+        }
+        return _normalizeUrl(url);
+      }
+    }
+    
+    return null;
+  }
+
   // Parse RSS feed
   Future<List<NewsArticle>> _fetchFromRSS(String url, String sourceName) async {
     try {
+      print('🔄 Fetching from $sourceName...');
+      
       // ✅ FIX: Skip SSL verification for problematic certificates
       final client = HttpClient()
         ..badCertificateCallback = ((X509Certificate cert, String host, int port) => true);
@@ -93,6 +192,7 @@ class NewsService {
       final items = document.findAllElements('item');
 
       List<NewsArticle> articles = [];
+      int articlesWithImages = 0;
 
       for (var item in items) {
         try {
@@ -120,6 +220,7 @@ class NewsService {
           
           final title = titleElement.innerText;
           final description = _firstOrNull(item.findElements('description'))?.innerText ?? '';
+          
           // Support multiple date element names across RSS/Atom variants
           String pubDate = '';
           pubDate = _firstOrNull(item.findElements('pubDate'))?.innerText.trim() ?? '';
@@ -141,30 +242,9 @@ class NewsService {
             publishedDate = DateTime.now();
           }
 
-          // Extract image if available
-          String? imageUrl;
-          
-          // Try media:content
-          final mediaContent = _firstOrNull(item.findElements('media:content'));
-          if (mediaContent != null) {
-            imageUrl = mediaContent.getAttribute('url');
-          }
-          
-          // Try enclosure
-          if (imageUrl == null) {
-            final enclosure = _firstOrNull(item.findElements('enclosure'));
-            if (enclosure != null) {
-              imageUrl = enclosure.getAttribute('url');
-            }
-          }
-          
-          // Try media:thumbnail
-          if (imageUrl == null) {
-            final mediaThumbnail = _firstOrNull(item.findElements('media:thumbnail'));
-            if (mediaThumbnail != null) {
-              imageUrl = mediaThumbnail.getAttribute('url');
-            }
-          }
+          // ✅ ENHANCED: Extract image with multiple methods
+          final imageUrl = _extractImageUrl(item, description);
+          if (imageUrl != null) articlesWithImages++;
 
           articles.add(NewsArticle(
             title: _cleanHtml(title),
@@ -180,10 +260,11 @@ class NewsService {
         }
       }
 
+      print('✅ $sourceName: ${articles.length} articles, $articlesWithImages with images');
       client.close();
       return articles;
     } catch (e) {
-      print('Error fetching RSS from $sourceName: $e');
+      print('❌ Error fetching RSS from $sourceName: $e');
       return [];
     }
   }
@@ -201,9 +282,9 @@ class NewsService {
         cleaned = cleaned.split(',')[1].trim();
       }
       
-  // Remove timezone abbreviations and numeric offsets
-  cleaned = cleaned.replaceAll(RegExp(r'\s+(GMT|UTC|EST|PST|PHT|[A-Z]{3,4})\s*'), '');
-  cleaned = cleaned.replaceAll(RegExp(r'\s+[+-]\d{4}\s*'), '');
+      // Remove timezone abbreviations and numeric offsets
+      cleaned = cleaned.replaceAll(RegExp(r'\s+(GMT|UTC|EST|PST|PHT|[A-Z]{3,4})\s*'), '');
+      cleaned = cleaned.replaceAll(RegExp(r'\s+[+-]\d{4}\s*'), '');
       
       // Try parsing standard format
       try {

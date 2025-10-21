@@ -50,31 +50,40 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
     _loadNews();
   }
 
-  Future<void> _loadNews() async {
-    setState(() {
-      _isLoading = true;
-      _error = '';
-    });
+Future<void> _loadNews() async {
+  setState(() {
+    _isLoading = true;
+    _error = '';
+  });
 
-    try {
-      final articles = await _newsService.fetchNews();
-      
-      if (mounted) {
-        setState(() {
-          _allArticles = articles;
-          _applyFilter();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
+  try {
+    final articles = await _newsService.fetchNews();
+    
+    // 🔍 DEBUG: Check what we're getting
+    print('📰 Total articles fetched: ${articles.length}');
+    for (var i = 0; i < articles.length && i < 3; i++) {
+      print('Article $i:');
+      print('  Title: ${articles[i].title}');
+      print('  Image URL: ${articles[i].imageUrl}');
+      print('  Has image: ${articles[i].imageUrl != null}');
+    }
+    
+    if (mounted) {
+      setState(() {
+        _allArticles = articles;
+        _applyFilter();
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    if (mounted) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     }
   }
+}
 
   void _applyFilter() {
     final keywords = _disasterCategories[_selectedFilter] ?? _disasterCategories['all']!;
