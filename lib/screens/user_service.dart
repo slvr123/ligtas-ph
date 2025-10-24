@@ -9,12 +9,12 @@ class UserService {
   String? get currentUserId => _auth.currentUser?.uid;
 
   // --- (Keep existing methods: createUserDocument, saveUserLocation, getUserLocation, hasLocation) ---
-
   // Create or Update user document on signup/login
   Future<void> createUserDocument({
     required String email,
     String? displayName,
   }) async {
+    /* ... same as before ... */
     if (currentUserId == null) {
       throw Exception('No user logged in to create a document for.');
     }
@@ -38,6 +38,7 @@ class UserService {
     required double latitude,
     required double longitude,
   }) async {
+    /* ... same as before ... */
     if (currentUserId == null) {
       throw Exception('No user logged in to save location for.');
     }
@@ -58,6 +59,7 @@ class UserService {
 
   // Get user location from Firestore
   Future<Map<String, dynamic>?> getUserLocation() async {
+    /* ... same as before ... */
     if (currentUserId == null) {
       throw Exception('No user logged in');
     }
@@ -86,11 +88,11 @@ class UserService {
 
   // Check if user has saved location
   Future<bool> hasLocation() async {
-    final location = await getUserLocation();
+    /* ... same as before ... */ final location = await getUserLocation();
     return location != null;
   }
 
-  // ⭐ MODIFIED: Save checklist state AND custom items map
+  // ⭐ MODIFIED: Save checklist state AND custom items map using UPDATE
   Future<void> saveChecklistData({
     required Map<String, bool> checklistState,
     required Map<String, List<String>>
@@ -100,22 +102,52 @@ class UserService {
       throw Exception('No user logged in to save checklist data for.');
     }
     try {
-      await _firestore.collection('users').doc(currentUserId).set(
+      // Use UPDATE to overwrite the specific map fields completely
+      print(
+          "UserService: Attempting UPDATE for checklist data..."); // Log attempt
+      await _firestore.collection('users').doc(currentUserId).update(
         {
-          'checklistState': checklistState,
+          'checklistState': checklistState, // Overwrite entire state map
           'customChecklistCategories':
-              customCategories, // Save the category map
+              customCategories, // Overwrite entire categories map
           'updatedAt': FieldValue.serverTimestamp(),
         },
-        SetOptions(merge: true),
+        // SetOptions(merge: true), // DO NOT MERGE when using update for maps if you want deletions to persist
       );
+      print("UserService: Successfully UPDATED checklist data."); // Log success
     } catch (e) {
-      print('Error saving checklist data: $e');
-      throw Exception('Failed to save checklist data: $e');
+      // Handle cases where the document or fields might not exist yet during an update
+      if (e is FirebaseException && e.code == 'not-found') {
+        print(
+            "UserService: UPDATE failed (not-found), attempting SET instead."); // Log fallback
+        // Fallback to set (with merge)
+        try {
+          await _firestore.collection('users').doc(currentUserId).set(
+              {
+                'checklistState': checklistState,
+                'customChecklistCategories': customCategories,
+                'updatedAt': FieldValue.serverTimestamp(),
+              },
+              SetOptions(
+                  merge:
+                      true) // Merge here is okay for initial set or adding fields
+              );
+          print(
+              "UserService: Successfully SET checklist data after update failed."); // Log set success
+        } catch (e2) {
+          print(
+              'UserService: Error saving checklist data with SET fallback: $e2'); // Log set error
+          throw Exception('Failed to save checklist data: $e2');
+        }
+      } else {
+        print(
+            'UserService: Error UPDATING checklist data: $e'); // Log other update errors
+        throw Exception('Failed to save checklist data: $e');
+      }
     }
   }
 
-  // ⭐ MODIFIED: Get checklist state AND custom items map
+  // Get checklist state AND custom items map (no changes needed here)
   Future<Map<String, dynamic>> getChecklistData() async {
     if (currentUserId == null) {
       throw Exception('No user logged in to get checklist data for.');
@@ -138,7 +170,6 @@ class UserService {
             checklistState = firestoreMap
                 .map((key, value) => MapEntry(key, value as bool? ?? false));
           }
-
           // Load custom categories map
           if (data.containsKey('customChecklistCategories')) {
             final firestoreCategories =
@@ -154,20 +185,20 @@ class UserService {
       }
       return {
         'checklistState': checklistState,
-        'customChecklistCategories': customCategories, // Return the map
+        'customChecklistCategories': customCategories,
       };
     } catch (e) {
       print('Error getting checklist data: $e');
       return {
         'checklistState': <String, bool>{},
-        'customChecklistCategories':
-            <String, List<String>>{}, // Return empty map on error
+        'customChecklistCategories': <String, List<String>>{},
       };
     }
   }
 
   // Delete user data (for account deletion)
   Future<void> deleteUserData() async {
+    /* ... same as before ... */
     if (currentUserId == null) {
       throw Exception('No user logged in to delete data for.');
     }
