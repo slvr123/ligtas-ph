@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:disaster_awareness_app/services/community_service.dart';
 import 'package:disaster_awareness_app/screens/user_service.dart';
+import 'package:disaster_awareness_app/services/location_distance_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class CommunityScreen extends StatefulWidget {
@@ -16,7 +17,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
   final CommunityService _communityService = CommunityService();
   final UserService _userService = UserService();
   String _userLocation = 'Loading...';
+  double _userLatitude = 12.8797;
+  double _userLongitude = 121.7740;
   String _selectedCategory = 'all';
+  bool _sortByDistance = true;
 
   final List<Map<String, dynamic>> _categories = [
     {'id': 'all', 'name': 'All', 'icon': Icons.grid_view},
@@ -39,6 +43,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
       if (mounted && location != null) {
         setState(() {
           _userLocation = location['location'];
+          _userLatitude = location['latitude'];
+          _userLongitude = location['longitude'];
         });
       }
     } catch (e) {
@@ -67,7 +73,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
           ),
           child: Column(
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: const BoxDecoration(
@@ -94,14 +99,12 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   ],
                 ),
               ),
-
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Category Selection
                       const Text(
                         'Category',
                         style: TextStyle(
@@ -147,10 +150,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                 ))
                             .toList(),
                       ),
-
                       const SizedBox(height: 24),
-
-                      // Title Field
                       const Text(
                         'Title',
                         style: TextStyle(
@@ -174,10 +174,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 20),
-
-                      // Description Field
                       const Text(
                         'Description',
                         style: TextStyle(
@@ -202,10 +199,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 20),
-
-                      // Location Display
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -246,8 +240,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   ),
                 ),
               ),
-
-              // Submit Button
               Container(
                 padding: const EdgeInsets.all(16),
                 child: ElevatedButton(
@@ -264,7 +256,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     }
 
                     try {
-                      // Show loading
                       showDialog(
                         context: context,
                         barrierDismissible: false,
@@ -273,20 +264,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         ),
                       );
 
-                      final location = await _userService.getUserLocation();
-                      
                       await _communityService.createPost(
                         title: titleController.text,
                         description: descriptionController.text,
-                        location: location?['location'] ?? _userLocation,
-                        latitude: location?['latitude'] ?? 0.0,
-                        longitude: location?['longitude'] ?? 0.0,
+                        location: _userLocation,
+                        latitude: _userLatitude,
+                        longitude: _userLongitude,
                         category: selectedCategory,
                       );
 
                       if (mounted) {
-                        Navigator.pop(context); // Close loading
-                        Navigator.pop(context); // Close modal
+                        Navigator.pop(context);
+                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Post created successfully!'),
@@ -296,7 +285,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        Navigator.pop(context); // Close loading
+                        Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Error: $e'),
@@ -334,10 +323,19 @@ class _CommunityScreenState extends State<CommunityScreen> {
         title: const Text('Community Reports'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.my_location),
+            icon: Icon(_sortByDistance ? Icons.location_on : Icons.sort),
             onPressed: () {
+              setState(() {
+                _sortByDistance = !_sortByDistance;
+              });
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Showing posts near $_userLocation')),
+                SnackBar(
+                  content: Text(
+                    _sortByDistance
+                        ? 'Sorted by distance'
+                        : 'Sorted by recent',
+                  ),
+                ),
               );
             },
           ),
@@ -351,7 +349,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
       ),
       body: Column(
         children: [
-          // Category Filter
           Container(
             height: 60,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -392,120 +389,101 @@ class _CommunityScreenState extends State<CommunityScreen> {
               },
             ),
           ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _selectedCategory == 'all'
+                  ? _communityService.getAllPosts()
+                  : _communityService.getPostsByCategory(_selectedCategory, _userLocation),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          // Posts List
-// In the StreamBuilder section of your build method, update this part:
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading posts',
+                          style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.7)),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-// Posts List
-Expanded(
-  child: StreamBuilder<QuerySnapshot>(
-    stream: _selectedCategory == 'all'
-        ? _communityService.getAllPosts()
-        : _communityService.getPostsByCategory(_selectedCategory, _userLocation),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.forum_outlined,
+                          size: 80,
+                          color: Colors.white.withOpacity(0.3),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No posts yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white.withOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-      if (snapshot.hasError) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 60, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Error loading posts',
-                style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.7)),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${snapshot.error}',
-                style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5)),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                var posts = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return data['status'] == 'active';
+                }).toList();
+
+                // Sort by distance if enabled
+                if (_sortByDistance && posts.isNotEmpty) {
+                  posts.sort((a, b) {
+                    final dataA = a.data() as Map<String, dynamic>;
+                    final dataB = b.data() as Map<String, dynamic>;
+                    
+                    final distA = LocationDistanceService.calculateDistance(
+                      _userLatitude,
+                      _userLongitude,
+                      dataA['latitude'] ?? 0.0,
+                      dataA['longitude'] ?? 0.0,
+                    );
+                    
+                    final distB = LocationDistanceService.calculateDistance(
+                      _userLatitude,
+                      _userLongitude,
+                      dataB['latitude'] ?? 0.0,
+                      dataB['longitude'] ?? 0.0,
+                    );
+                    
+                    return distA.compareTo(distB);
+                  });
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    setState(() {});
+                  },
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: posts.length,
+                    itemBuilder: (context, index) {
+                      final post = posts[index];
+                      final data = post.data() as Map<String, dynamic>;
+                      return _buildPostCard(post.id, data);
+                    },
+                  ),
+                );
+              },
+            ),
           ),
-        );
-      }
-
-      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.forum_outlined,
-                size: 80,
-                color: Colors.white.withOpacity(0.3),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No posts yet',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white.withOpacity(0.5),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Be the first to report!',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.3),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      // ✅ FILTER OUT DELETED/RESOLVED POSTS LOCALLY
-      final posts = snapshot.data!.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return data['status'] == 'active';
-      }).toList();
-
-      if (posts.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.forum_outlined,
-                size: 80,
-                color: Colors.white.withOpacity(0.3),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'No active posts',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.white.withOpacity(0.5),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-
-      return RefreshIndicator(
-        onRefresh: () async {
-          setState(() {});
-        },
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            final post = posts[index];
-            final data = post.data() as Map<String, dynamic>;
-            return _buildPostCard(post.id, data);
-          },
-        ),
-      );
-    },
-  ),
-),
         ],
       ),
     );
@@ -515,9 +493,16 @@ Expanded(
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     final isLiked = (data['likedBy'] as List?)?.contains(currentUserId) ?? false;
     final timestamp = data['createdAt'] as Timestamp?;
-    final timeAgo = timestamp != null
-        ? timeago.format(timestamp.toDate())
-        : 'Just now';
+    final timeAgo = timestamp != null ? timeago.format(timestamp.toDate()) : 'Just now';
+
+    // Calculate distance
+    final distance = LocationDistanceService.calculateDistance(
+      _userLatitude,
+      _userLongitude,
+      data['latitude'] ?? 0.0,
+      data['longitude'] ?? 0.0,
+    );
+    final distanceString = LocationDistanceService.getDistanceString(distance);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -528,7 +513,6 @@ Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header - FIXED OVERFLOW
             Row(
               children: [
                 CircleAvatar(
@@ -561,7 +545,7 @@ Expanded(
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              data['location'] ?? 'Unknown',
+                              distanceString,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.white.withOpacity(0.5),
@@ -582,7 +566,6 @@ Expanded(
                     ],
                   ),
                 ),
-                // Category Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
@@ -600,10 +583,7 @@ Expanded(
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
-            // Title
             Text(
               data['title'] ?? 'Untitled',
               style: const TextStyle(
@@ -612,10 +592,7 @@ Expanded(
                 color: Colors.white,
               ),
             ),
-
             const SizedBox(height: 8),
-
-            // Description
             Text(
               data['description'] ?? '',
               style: const TextStyle(
@@ -625,10 +602,7 @@ Expanded(
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
-
             const SizedBox(height: 12),
-
-            // Actions
             Row(
               children: [
                 IconButton(

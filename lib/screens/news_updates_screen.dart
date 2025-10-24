@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:disaster_awareness_app/services/news_service.dart';
+import 'package:disaster_awareness_app/screens/user_service.dart';
+import 'package:disaster_awareness_app/services/location_distance_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class NewsUpdatesScreen extends StatefulWidget {
@@ -16,13 +18,18 @@ class NewsUpdatesScreen extends StatefulWidget {
 
 class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
   final NewsService _newsService = NewsService();
+  final UserService _userService = UserService();
   List<NewsArticle> _allArticles = [];
   List<NewsArticle> _filteredArticles = [];
   bool _isLoading = true;
   String _error = '';
   String _selectedFilter = 'all';
+  
+  // User location coordinates
+  double _userLatitude = 12.8797;
+  double _userLongitude = 121.7740;
+  bool _sortByDistance = true;
 
-  // Disaster categories with keywords - FOR TITLE ONLY
   final Map<String, List<String>> _disasterCategories = {
     'all': ['typhoon', 'bagyo', 'storm', 'earthquake', 'lindol', 'flood', 'baha', 
             'fire', 'sunog', 'volcano', 'bulkan', 'landslide', 'guho', 'tsunami',
@@ -47,62 +54,71 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
   @override
   void initState() {
     super.initState();
+    _loadUserCoordinates();
     _loadNews();
   }
 
-Future<void> _loadNews() async {
-  setState(() {
-    _isLoading = true;
-    _error = '';
-  });
-
-  try {
-    final articles = await _newsService.fetchNews();
-    
-    // 🔍 DEBUG: Check what we're getting
-    print('📰 Total articles fetched: ${articles.length}');
-    for (var i = 0; i < articles.length && i < 3; i++) {
-      print('Article $i:');
-      print('  Title: ${articles[i].title}');
-      print('  Image URL: ${articles[i].imageUrl}');
-      print('  Has image: ${articles[i].imageUrl != null}');
-    }
-    
-    if (mounted) {
-      setState(() {
-        _allArticles = articles;
-        _applyFilter();
-        _isLoading = false;
-      });
-    }
-  } catch (e) {
-    if (mounted) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+  Future<void> _loadUserCoordinates() async {
+    try {
+      final location = await _userService.getUserLocation();
+      if (location != null && mounted) {
+        setState(() {
+          _userLatitude = location['latitude'] ?? 12.8797;
+          _userLongitude = location['longitude'] ?? 121.7740;
+        });
+      }
+    } catch (e) {
+      print('Error loading user coordinates: $e');
     }
   }
-}
+
+  Future<void> _loadNews() async {
+    setState(() {
+      _isLoading = true;
+      _error = '';
+    });
+
+    try {
+      final articles = await _newsService.fetchNews();
+      
+      print('📰 Total articles fetched: ${articles.length}');
+      for (var i = 0; i < articles.length && i < 3; i++) {
+        print('Article $i:');
+        print('  Title: ${articles[i].title}');
+        print('  Image URL: ${articles[i].imageUrl}');
+        print('  Has image: ${articles[i].imageUrl != null}');
+      }
+      
+      if (mounted) {
+        setState(() {
+          _allArticles = articles;
+          _applyFilter();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   void _applyFilter() {
     final keywords = _disasterCategories[_selectedFilter] ?? _disasterCategories['all']!;
     
-    // ✅ IMPROVED: Filter by TITLE only (more accurate)
     _filteredArticles = _allArticles.where((article) {
       final title = article.title.toLowerCase();
-      
-      // Check if title contains any disaster keywords
       return keywords.any((keyword) => title.contains(keyword.toLowerCase()));
     }).toList();
 
-    // ✅ ENHANCED: Multi-level location prioritization
     if (widget.location.isNotEmpty) {
       final locationParts = widget.location.split(',').map((e) => e.trim().toLowerCase()).toList();
       final city = locationParts.isNotEmpty ? locationParts[0] : '';
       final province = locationParts.length > 1 ? locationParts[1] : '';
       
-      // Metro Manila cities
       final metroManilaCities = [
         'manila', 'quezon city', 'makati', 'pasay', 'taguig', 'mandaluyong',
         'pasig', 'marikina', 'caloocan', 'valenzuela', 'malabon', 'navotas',
@@ -111,26 +127,22 @@ Future<void> _loadNews() async {
       
       final isMetroManila = province.contains('metro manila') || metroManilaCities.contains(city);
       
-      // Sort by location relevance
       _filteredArticles.sort((a, b) {
         final aContent = '${a.title} ${a.description}'.toLowerCase();
         final bContent = '${b.title} ${b.description}'.toLowerCase();
         
-        // Level 1: Exact city match
         final aHasCity = aContent.contains(city);
         final bHasCity = bContent.contains(city);
         
         if (aHasCity && !bHasCity) return -1;
         if (!aHasCity && bHasCity) return 1;
         
-        // Level 2: Province match
         final aHasProvince = province.isNotEmpty && aContent.contains(province);
         final bHasProvince = province.isNotEmpty && bContent.contains(province);
         
         if (aHasProvince && !bHasProvince) return -1;
         if (!aHasProvince && bHasProvince) return 1;
         
-        // Level 3: Metro Manila cities
         if (isMetroManila) {
           final aHasMetroCity = metroManilaCities.any((c) => aContent.contains(c));
           final bHasMetroCity = metroManilaCities.any((c) => bContent.contains(c));
@@ -139,7 +151,6 @@ Future<void> _loadNews() async {
           if (!aHasMetroCity && bHasMetroCity) return 1;
         }
         
-        // Level 4: Nearby regions
         final nearbyKeywords = _getNearbyRegionKeywords(city, province);
         final aHasNearby = nearbyKeywords.any((k) => aContent.contains(k));
         final bHasNearby = nearbyKeywords.any((k) => bContent.contains(k));
@@ -147,7 +158,6 @@ Future<void> _loadNews() async {
         if (aHasNearby && !bHasNearby) return -1;
         if (!aHasNearby && bHasNearby) return 1;
         
-        // Level 5: Sort by date (newest first)
         return b.publishedDate.compareTo(a.publishedDate);
       });
     }
@@ -229,6 +239,23 @@ Future<void> _loadNews() async {
         ),
         actions: [
           IconButton(
+            icon: Icon(_sortByDistance ? Icons.location_on : Icons.schedule),
+            onPressed: () {
+              setState(() {
+                _sortByDistance = !_sortByDistance;
+                _applyFilter();
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    _sortByDistance ? 'Sorted by location' : 'Sorted by date',
+                  ),
+                ),
+              );
+            },
+            tooltip: _sortByDistance ? 'Sort by date' : 'Sort by location',
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadNews,
             tooltip: 'Refresh',
@@ -237,7 +264,6 @@ Future<void> _loadNews() async {
       ),
       body: Column(
         children: [
-          // Filter Chips
           Container(
             height: 60,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -280,7 +306,6 @@ Future<void> _loadNews() async {
             ),
           ),
 
-          // Content
           Expanded(
             child: _buildContent(),
           ),
@@ -396,7 +421,6 @@ Future<void> _loadNews() async {
   }
 
   Widget _buildNewsCard(NewsArticle article) {
-    // ✅ FIXED: Show actual date instead of "a moment ago"
     final publishedDate = article.publishedDate;
     final now = DateTime.now();
     final difference = now.difference(publishedDate);
@@ -404,18 +428,14 @@ Future<void> _loadNews() async {
     String dateDisplay;
     
     if (difference.inDays == 0) {
-      // Today - show time
       final hour = publishedDate.hour.toString().padLeft(2, '0');
       final minute = publishedDate.minute.toString().padLeft(2, '0');
       dateDisplay = 'Today at $hour:$minute';
     } else if (difference.inDays == 1) {
-      // Yesterday
       dateDisplay = 'Yesterday';
     } else if (difference.inDays < 7) {
-      // Within a week - show days ago
       dateDisplay = '${difference.inDays} days ago';
     } else {
-      // Older - show actual date
       final month = _getMonthName(publishedDate.month);
       dateDisplay = '$month ${publishedDate.day}, ${publishedDate.year}';
     }
@@ -423,7 +443,6 @@ Future<void> _loadNews() async {
     final disasterType = _getDisasterType(article);
     final disasterColor = _getDisasterColor(disasterType);
     
-    // Check if local news
     final locationKeywords = widget.location.split(',').map((e) => e.trim().toLowerCase()).toList();
     final isLocalNews = locationKeywords.any((keyword) => 
       article.title.toLowerCase().contains(keyword) || 
@@ -445,7 +464,6 @@ Future<void> _loadNews() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image (if available)
             if (article.imageUrl != null)
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(
@@ -482,7 +500,6 @@ Future<void> _loadNews() async {
                         );
                       },
                     ),
-                    // Location badge on image
                     if (isLocalNews)
                       Positioned(
                         top: 12,
@@ -528,16 +545,13 @@ Future<void> _loadNews() async {
                 ),
               ),
 
-            // Content
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Source, Disaster Type, and Date
                   Row(
                     children: [
-                      // Disaster Type Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -557,7 +571,6 @@ Future<void> _loadNews() async {
                         ),
                       ),
                       const SizedBox(width: 6),
-                      // Source Badge
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -577,7 +590,6 @@ Future<void> _loadNews() async {
                         ),
                       ),
                       const Spacer(),
-                      // ✅ NEW: Show actual date instead of "a moment ago"
                       Icon(
                         Icons.calendar_today,
                         size: 12,
@@ -597,7 +609,6 @@ Future<void> _loadNews() async {
 
                   const SizedBox(height: 12),
 
-                  // Title
                   Text(
                     article.title,
                     style: const TextStyle(
@@ -611,7 +622,6 @@ Future<void> _loadNews() async {
 
                   const SizedBox(height: 8),
 
-                  // Description
                   if (article.description.isNotEmpty)
                     Text(
                       article.description,
@@ -625,7 +635,6 @@ Future<void> _loadNews() async {
 
                   const SizedBox(height: 12),
 
-                  // Read More Button
                   Row(
                     children: [
                       const Spacer(),
@@ -648,7 +657,6 @@ Future<void> _loadNews() async {
     );
   }
   
-  // Helper function to get month name
   String _getMonthName(int month) {
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
