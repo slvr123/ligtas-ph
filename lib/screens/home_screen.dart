@@ -12,7 +12,7 @@ import 'package:disaster_awareness_app/widgets/home_grid_button.dart';
 import 'package:disaster_awareness_app/widgets/sos_button.dart';
 import 'package:disaster_awareness_app/services/alert_service.dart';
 import 'location_setup_screen.dart';
-import 'package:disaster_awareness_app/screens/profile_screen.dart'; 
+import 'package:disaster_awareness_app/screens/profile_screen.dart';
 import 'package:disaster_awareness_app/screens/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,14 +46,14 @@ class _HomeScreenState extends State<HomeScreen> {
       print('📍 Loading highest priority alert for ${widget.location}...');
       final alertService = AlertService();
       final alert = await alertService.getHighestPriorityAlert(widget.location);
-      
+
       if (mounted) {
         setState(() {
           _highestPriorityAlert = alert;
           _isLoadingAlert = false;
         });
       }
-      
+
       if (alert != null) {
         print('🚨 Highest priority alert: ${alert.title} (${alert.level})');
       } else {
@@ -117,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (shouldLogout == true) {
       try {
         await FirebaseAuth.instance.signOut();
-        
+
         if (context.mounted) {
           Navigator.of(context).popUntil((route) => route.isFirst);
           ScaffoldMessenger.of(context).clearSnackBars();
@@ -151,19 +151,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('📍 Location: ${widget.location}',
+                  Text(
+                    '📍 Location: ${widget.location}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  Text('Lat: ${widget.latitude.toStringAsFixed(4)}, Lng: ${widget.longitude.toStringAsFixed(4)}',
+                  Text(
+                    'Lat: ${widget.latitude.toStringAsFixed(4)}, Lng: ${widget.longitude.toStringAsFixed(4)}',
                     style: const TextStyle(fontSize: 12),
                   ),
                   const SizedBox(height: 16),
-                  Text('Current Alert: ${_highestPriorityAlert?.title ?? "✅ None"}',
+                  Text(
+                    'Current Alert: ${_highestPriorityAlert?.title ?? "✅ None"}',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  const Text('🔌 API Status:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('🔌 API Status:',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   if (snapshot.connectionState == ConnectionState.waiting)
                     const Padding(
@@ -199,10 +203,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<List<Widget>> _getDebugInfo() async {
     final alertService = AlertService();
     await alertService.fetchAlerts();
-    
+
     final widgets = <Widget>[];
     for (var info in alertService.debugInfo) {
-      final statusIcon = info.status == 'SUCCESS' ? '✅' : info.status == 'ERROR' ? '❌' : '⚠️';
+      final statusIcon = info.status == 'SUCCESS'
+          ? '✅'
+          : info.status == 'ERROR'
+              ? '❌'
+              : '⚠️';
       widgets.add(
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -215,13 +223,20 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$statusIcon ${info.source}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                Text('Status: ${info.status}', style: const TextStyle(fontSize: 11)),
-                Text('Fetched: ${info.totalFetched} | Active: ${info.activeAlerts}', style: const TextStyle(fontSize: 11)),
+                Text('$statusIcon ${info.source}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 12)),
+                Text('Status: ${info.status}',
+                    style: const TextStyle(fontSize: 11)),
+                Text(
+                    'Fetched: ${info.totalFetched} | Active: ${info.activeAlerts}',
+                    style: const TextStyle(fontSize: 11)),
                 if (info.errorMessage != null)
-                  Text('Error: ${info.errorMessage}', style: const TextStyle(fontSize: 10, color: Colors.red)),
+                  Text('Error: ${info.errorMessage}',
+                      style: const TextStyle(fontSize: 10, color: Colors.red)),
                 if (info.sampleAlerts != null && info.sampleAlerts!.isNotEmpty)
-                  Text('Sample: ${info.sampleAlerts!.join(", ")}', style: const TextStyle(fontSize: 10)),
+                  Text('Sample: ${info.sampleAlerts!.join(", ")}',
+                      style: const TextStyle(fontSize: 10)),
               ],
             ),
           ),
@@ -234,14 +249,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Home', style: theme.textTheme.headlineMedium),
-            Text(widget.location, style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12)),
+            Text(widget.location,
+                style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12)),
           ],
         ),
         actions: [
@@ -272,7 +288,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: 'profile',
                 child: Row(
                   children: [
-                    Icon(Icons.person_outline, color: theme.colorScheme.onSurface),
+                    Icon(Icons.person_outline,
+                        color: theme.colorScheme.onSurface),
                     const SizedBox(width: 12),
                     Text('Profile', style: theme.textTheme.bodyLarge),
                   ],
@@ -282,7 +299,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: 'settings',
                 child: Row(
                   children: [
-                    Icon(Icons.settings_outlined, color: theme.colorScheme.onSurface),
+                    Icon(Icons.settings_outlined,
+                        color: theme.colorScheme.onSurface),
                     const SizedBox(width: 12),
                     Text('Settings', style: theme.textTheme.bodyLarge),
                   ],
@@ -315,10 +333,10 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             "Highest Priority Alert",
-            style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface),
+            style: theme.textTheme.headlineMedium
+                ?.copyWith(color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 8),
-          
           if (_isLoadingAlert)
             Container(
               padding: const EdgeInsets.all(16),
@@ -347,7 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green.shade400, size: 24),
+                  Icon(Icons.check_circle,
+                      color: Colors.green.shade400, size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -374,9 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-
           const SizedBox(height: 24),
-          
           // Debug Button
           ElevatedButton.icon(
             onPressed: _showAlertDiagnostics,
@@ -390,11 +407,11 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
-
           const SizedBox(height: 24),
           Text(
             "Tools & Resources",
-            style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface),
+            style: theme.textTheme.headlineMedium
+                ?.copyWith(color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 16),
           GridView.count(
@@ -408,7 +425,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 text: 'Alerts',
                 icon: Icons.warning_amber_rounded,
                 color: theme.colorScheme.primary,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlertsScreen(location: widget.location))),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            AlertsScreen(location: widget.location))),
               ),
               HomeGridButton(
                 text: 'News Updates',
@@ -416,7 +437,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: const Color(0xFFea580c),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => NewsUpdatesScreen(location: widget.location)),
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          NewsUpdatesScreen(location: widget.location)),
                 ),
               ),
               HomeGridButton(
@@ -432,20 +455,38 @@ class _HomeScreenState extends State<HomeScreen> {
                 text: 'Emergency Hotlines',
                 icon: Icons.phone_in_talk_rounded,
                 color: const Color(0xFF1d4ed8),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HotlinesScreen(location: widget.location))),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            HotlinesScreen(location: widget.location))),
               ),
               HomeGridButton(
                 text: 'Safety Checklist',
                 icon: Icons.checklist_rtl_rounded,
                 color: const Color(0xFF15803d),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChecklistScreen())),
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ChecklistScreen())),
               ),
+
+              // ⭐ THIS IS THE MODIFIED BUTTON
               HomeGridButton(
                 text: 'First Aid & Safety',
                 icon: Icons.health_and_safety_rounded,
                 color: const Color(0xFF7e22ce),
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthSafetyScreen())),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => HealthSafetyScreen(
+                      // Pass the required data
+                      location: widget.location,
+                      latitude: widget.latitude,
+                      longitude: widget.longitude,
+                    ),
+                  ),
+                ),
               ),
+              // ⭐ END MODIFICATION
             ],
           ),
         ],
