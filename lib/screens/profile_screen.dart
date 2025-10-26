@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -678,6 +679,31 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
     );
   }
 
+    Future<void> _makePhoneCall(BuildContext context, String phoneNumber) async {
+    final String formattedNumber = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: formattedNumber,
+    );
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not launch dialer for $phoneNumber')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error launching dialer: $e')),
+        );
+      }
+    }
+  }
+
   bool _isValidPhilippinePhone(String phone) {
     // Remove spaces and dashes
     final cleanPhone = phone.replaceAll(RegExp(r'[\s\-]'), '');
@@ -753,6 +779,17 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                   trailing: PopupMenuButton(
                     icon: const Icon(Icons.more_vert),
                     itemBuilder: (context) => [
+                      // CALL BUTTON - Added at the top
+                      const PopupMenuItem(
+                        value: 'call',
+                        child: Row(
+                          children: [
+                            Icon(Icons.phone, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Call'),
+                          ],
+                        ),
+                      ),
                       const PopupMenuItem(
                         value: 'edit',
                         child: Row(
@@ -775,7 +812,9 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                       ),
                     ],
                     onSelected: (value) {
-                      if (value == 'edit') {
+                      if (value == 'call') {
+                        _makePhoneCall(context, phone);
+                      } else if (value == 'edit') {
                         _editContact(contact.id, name, phone);
                       } else if (value == 'delete') {
                         _deleteContact(contact.id);
