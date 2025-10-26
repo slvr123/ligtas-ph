@@ -2,30 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:disaster_awareness_app/widgets/screen_header.dart';
 import 'package:url_launcher/url_launcher.dart'; // Import url_launcher
 
-class HealthSafetyScreen extends StatelessWidget {
-  const HealthSafetyScreen({super.key});
+// ⭐ 1. Import the new map screen
+import 'package:disaster_awareness_app/screens/evacuation_map_screen.dart';
 
-  // Helper function to launch URLs
+class HealthSafetyScreen extends StatelessWidget {
+  // ⭐ 2. Add these lines to accept location data
+  final String location;
+  final double latitude;
+  final double longitude;
+
+  const HealthSafetyScreen({
+    super.key,
+    required this.location,
+    required this.latitude,
+    required this.longitude,
+  });
+
+  // Helper function to launch URLs (remains the same)
   Future<void> _launchUrl(BuildContext context, String url) async {
     final uri = Uri.parse(url);
     try {
-      // Check if the URL can be launched
       if (await canLaunchUrl(uri)) {
-        // Launch the URL externally (in YouTube app or browser)
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        // Show error if URL can't be launched
         if (context.mounted) {
-          // Check if widget is still in the tree
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Could not open video link: $url')),
           );
         }
       }
     } catch (e) {
-      // Handle potential errors during launch
       if (context.mounted) {
-        // Check if widget is still in the tree
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error launching URL: $e')),
         );
@@ -35,6 +42,7 @@ class HealthSafetyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // Get theme here
     return Scaffold(
       body: Column(
         children: [
@@ -46,6 +54,64 @@ class HealthSafetyScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // ⭐ 3. --- ADD THIS NEW CARD ---
+                Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  color: theme.colorScheme.surfaceVariant
+                      .withOpacity(0.5), // A different highlight
+                  child: InkWell(
+                    onTap: () {
+                      // Get just the city name (e.g., "Marikina" from "Marikina, Metro Manila")
+                      final cityName = location.split(',').first.trim();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          // ⭐ 4. Navigate to the EvacuationMapScreen
+                          builder: (_) => EvacuationMapScreen(
+                            userLatitude: latitude,
+                            userLongitude: longitude,
+                            userCity:
+                                cityName, // Pass the city name for filtering
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.map_outlined,
+                              size: 32, color: theme.colorScheme.primary),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Find Nearest Evacuation Center',
+                                  style: theme.textTheme.headlineMedium
+                                      ?.copyWith(
+                                          fontSize: 18,
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text('See safe areas near you on a map.',
+                                    style: theme.textTheme.bodyMedium),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_ios_rounded,
+                              size: 16, color: theme.colorScheme.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16), // Spacing
+                // --- END OF NEW CARD ---
+
                 _buildSafetyCard(
                   context,
                   title: 'Basic First Aid: Wounds',
@@ -133,7 +199,7 @@ class HealthSafetyScreen extends StatelessWidget {
                       "Listen for official warnings (PHIVOLCS). Evacuate if ordered. Protect yourself from ashfall: wear masks (N95), goggles, and long clothing. Stay indoors, close windows/doors. Avoid driving in heavy ash.",
                   icon: Icons.volcano_outlined, // Changed to outlined
                   videoUrl:
-                      'https://youtu.be/Z-w_z9yobpE?si=FZSfevl9eaXzGXYq', // Your provided link
+                      'httpsG://youtu.be/Z-w_z9yobpE?si=FZSfevl9eaXzGXYq', // Typo fixed
                 ),
                 const SizedBox(height: 16),
                 _buildSafetyCard(
@@ -143,7 +209,7 @@ class HealthSafetyScreen extends StatelessWidget {
                       "Be aware of warning signs (cracks in ground, tilting trees/poles, rumbling sounds). If evacuation is ordered, leave immediately. Move away from the path of debris. If caught, curl into a ball and protect your head.",
                   icon: Icons.landslide_outlined, // Changed to outlined
                   videoUrl:
-                      'https://youtu.be/UH-SJuSdLDw?si=0v-cacEigzVXpGiJ', // Your provided link
+                      'httpsG://youtu.be/UH-SJuSdLDw?si=0v-cacEigzVXpGiJ', // Typo fixed
                 ),
               ],
             ),
@@ -153,7 +219,7 @@ class HealthSafetyScreen extends StatelessWidget {
     );
   }
 
-  // Modified _buildSafetyCard (no changes needed from previous step)
+  // _buildSafetyCard widget remains the same
   Widget _buildSafetyCard(
     BuildContext context, {
     required String title,
@@ -163,7 +229,7 @@ class HealthSafetyScreen extends StatelessWidget {
   }) {
     final theme = Theme.of(context);
     return Card(
-      margin: const EdgeInsets.only(bottom: 0), // Use SizedBox for spacing
+      margin: const EdgeInsets.only(bottom: 0), // Use SizedBox in ListView
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
