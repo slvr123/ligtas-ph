@@ -75,14 +75,14 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     _customCategories.forEach((_, items) {
       all.addAll(items);
     });
-    _checklistState.keys.forEach((key) {
+    for (var key in _checklistState.keys) {
       if (key.contains("::")) {
         final parts = key.split("::");
         if (parts.length > 1 && parts[1].isNotEmpty) {
           all.add(parts[1]);
         }
       }
-    });
+    }
     return Set<String>.from(all).toList();
   }
 
@@ -452,12 +452,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                     if (useNewCategory) {
                       categoryToAdd = newCategoryController.text.trim();
                       if (categoryToAdd.isEmpty) {
-                        if (mounted)
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text(
                                       'New category name cannot be empty.'),
                                   backgroundColor: Colors.red));
+                        }
                         return;
                       }
                       if (categoryToAdd.toLowerCase() ==
@@ -466,31 +467,34 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                               homeCategory.toLowerCase() ||
                           categoryToAdd.toLowerCase() ==
                               otherCategory.toLowerCase()) {
-                        if (mounted)
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                               content: Text(
                                   'Cannot reuse standard category names ("$goBagCategory", "$homeCategory", "$otherCategory").'),
                               backgroundColor: Colors.orange));
+                        }
                         return;
                       }
                     } else if (selectedCategoryValue != null) {
                       categoryToAdd = selectedCategoryValue!;
                     } else {
-                      if (mounted)
+                      if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content:
                                     Text('Please select or create a category.'),
                                 backgroundColor: Colors.red));
+                      }
                       return;
                     }
                     if (newItem.isEmpty) {
-                      if (mounted)
+                      if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                                 content:
                                     Text('Item description cannot be empty.'),
                                 backgroundColor: Colors.red));
+                      }
                       return;
                     }
                     final categoryItemsLower =
@@ -498,11 +502,12 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                             .map((i) => i.toLowerCase())
                             .toList();
                     if (categoryItemsLower.contains(newItem.toLowerCase())) {
-                      if (mounted)
+                      if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                             content: Text(
                                 'Item "$newItem" already exists in category "$categoryToAdd".'),
                             backgroundColor: Colors.orange));
+                      }
                       return;
                     }
 
@@ -522,8 +527,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
                     // Await save AFTER state update
                     await _saveChecklistData();
-                    if (context.mounted)
+                    if (context.mounted) {
                       Navigator.of(context).pop(); // Close dialog safely
+                    }
                   },
                 ),
               ],
@@ -558,9 +564,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddItemDialog,
         tooltip: 'Add Item',
-        child: const Icon(Icons.add),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [

@@ -175,7 +175,7 @@ class _SosButtonState extends State<SosButton> {
     const double sliderHeight = 60.0;
     const double sliderWidth = 250.0;
     const double thumbSize = 50.0;
-    final double maxDrag = sliderWidth - thumbSize - 10;
+    const double maxDrag = sliderWidth - thumbSize - 10;
 
     return Container(
       height: sliderHeight,
@@ -233,7 +233,7 @@ class _SosButtonState extends State<SosButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
+    return SizedBox(
       height: 60,
       width: 250,
       child:

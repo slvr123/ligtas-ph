@@ -520,16 +520,16 @@ class _NewsUpdatesScreenState extends State<NewsUpdatesScreen> {
                               ),
                             ],
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.location_on,
                                 size: 14,
                                 color: Colors.white,
                               ),
-                              const SizedBox(width: 4),
-                              const Text(
+                              SizedBox(width: 4),
+                              Text(
                                 'YOUR AREA',
                                 style: TextStyle(
                                   fontSize: 11,

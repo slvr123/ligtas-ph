@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:disaster_awareness_app/services/fcm_service.dart';
 import 'app.dart';
 
 Future<void> main() async {
@@ -22,6 +23,14 @@ Future<void> main() async {
     } else {
       await Firebase.initializeApp();
     }
+  }
+
+  // Initialize FCM for push notifications
+  try {
+    await FCMService().initialize();
+    print('✅ FCM initialized successfully');
+  } catch (e) {
+    print('❌ Error initializing FCM: $e');
   }
 
   await SystemChrome.setPreferredOrientations([

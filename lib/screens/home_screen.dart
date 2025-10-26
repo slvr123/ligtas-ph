@@ -10,15 +10,15 @@ import 'package:disaster_awareness_app/screens/community_screen.dart';
 import 'package:disaster_awareness_app/widgets/disaster_alert_card.dart';
 import 'package:disaster_awareness_app/widgets/home_grid_button.dart';
 import 'package:disaster_awareness_app/widgets/sos_button.dart';
+import 'package:disaster_awareness_app/services/alert_service.dart';
 import 'location_setup_screen.dart';
 import 'package:disaster_awareness_app/screens/profile_screen.dart'; 
 import 'package:disaster_awareness_app/screens/settings_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final String location;
   final double latitude;
   final double longitude;
-  
 
   const HomeScreen({
     super.key,
@@ -26,6 +26,63 @@ class HomeScreen extends StatelessWidget {
     required this.latitude,
     required this.longitude,
   });
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  Alert? _highestPriorityAlert;
+  bool _isLoadingAlert = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHighestPriorityAlert();
+  }
+
+  Future<void> _loadHighestPriorityAlert() async {
+    try {
+      print('📍 Loading highest priority alert for ${widget.location}...');
+      final alertService = AlertService();
+      final alert = await alertService.getHighestPriorityAlert(widget.location);
+      
+      if (mounted) {
+        setState(() {
+          _highestPriorityAlert = alert;
+          _isLoadingAlert = false;
+        });
+      }
+      
+      if (alert != null) {
+        print('🚨 Highest priority alert: ${alert.title} (${alert.level})');
+      } else {
+        print('✅ No alerts for ${widget.location}');
+      }
+    } catch (e) {
+      print('❌ Error loading alert: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingAlert = false;
+        });
+      }
+    }
+  }
+
+  Color _getAlertColor(String level) {
+    switch (level.toUpperCase()) {
+      case 'SEVERE':
+        return Colors.red.shade700;
+      case 'MODERATE':
+        return Colors.orange.shade700;
+      case 'WARNING':
+        return Colors.amber.shade700;
+      case 'INFO':
+        return Colors.blue.shade700;
+      default:
+        return Colors.grey.shade700;
+    }
+  }
 
   void _changeLocation(BuildContext context) {
     Navigator.pushAndRemoveUntil(
@@ -36,7 +93,6 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _logout(BuildContext context) async {
-    // Show confirmation dialog
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -60,10 +116,8 @@ class HomeScreen extends StatelessWidget {
 
     if (shouldLogout == true) {
       try {
-        // Sign out from Firebase
         await FirebaseAuth.instance.signOut();
         
-        // Ensure we return to the root route so AuthWrapper rebuilds to LoginPage
         if (context.mounted) {
           Navigator.of(context).popUntil((route) => route.isFirst);
           ScaffoldMessenger.of(context).clearSnackBars();
@@ -71,9 +125,7 @@ class HomeScreen extends StatelessWidget {
             const SnackBar(content: Text('Logged out')),
           );
         }
-        
       } catch (e) {
-        // Show error if logout fails
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -86,6 +138,99 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
+  void _showAlertDiagnostics() async {
+    showDialog(
+      context: context,
+      builder: (context) => FutureBuilder(
+        future: _getDebugInfo(),
+        builder: (context, snapshot) {
+          return AlertDialog(
+            title: const Text('Alert System Diagnostics'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('📍 Location: ${widget.location}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Lat: ${widget.latitude.toStringAsFixed(4)}, Lng: ${widget.longitude.toStringAsFixed(4)}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Current Alert: ${_highestPriorityAlert?.title ?? "✅ None"}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('🔌 API Status:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: CircularProgressIndicator(),
+                    )
+                  else if (snapshot.hasData)
+                    ...snapshot.data as List<Widget>
+                  else
+                    const Text('Error loading API status'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+              TextButton(
+                onPressed: () {
+                  _loadHighestPriorityAlert();
+                  Navigator.pop(context);
+                },
+                child: const Text('Refresh'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<List<Widget>> _getDebugInfo() async {
+    final alertService = AlertService();
+    await alertService.fetchAlerts();
+    
+    final widgets = <Widget>[];
+    for (var info in alertService.debugInfo) {
+      final statusIcon = info.status == 'SUCCESS' ? '✅' : info.status == 'ERROR' ? '❌' : '⚠️';
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade700),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$statusIcon ${info.source}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                Text('Status: ${info.status}', style: const TextStyle(fontSize: 11)),
+                Text('Fetched: ${info.totalFetched} | Active: ${info.activeAlerts}', style: const TextStyle(fontSize: 11)),
+                if (info.errorMessage != null)
+                  Text('Error: ${info.errorMessage}', style: const TextStyle(fontSize: 10, color: Colors.red)),
+                if (info.sampleAlerts != null && info.sampleAlerts!.isNotEmpty)
+                  Text('Sample: ${info.sampleAlerts!.join(", ")}', style: const TextStyle(fontSize: 10)),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -96,7 +241,7 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Home', style: theme.textTheme.headlineMedium),
-            Text(location, style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12)),
+            Text(widget.location, style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12)),
           ],
         ),
         actions: [
@@ -105,26 +250,21 @@ class HomeScreen extends StatelessWidget {
             onPressed: () => _changeLocation(context),
             tooltip: 'Change Location',
           ),
-          // Logout button with menu
           PopupMenuButton<String>(
             icon: const Icon(Icons.account_circle_outlined),
             onSelected: (value) {
               if (value == 'logout') {
                 _logout(context);
               } else if (value == 'profile') {
-                Future.microtask(() {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                });
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
               } else if (value == 'settings') {
-                Future.microtask(() {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                });
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
               }
             },
             itemBuilder: (context) => [
@@ -171,19 +311,86 @@ class HomeScreen extends StatelessWidget {
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: const SosButton(),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120), // Padding for SOS button
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
         children: [
           Text(
             "Highest Priority Alert",
             style: theme.textTheme.headlineMedium?.copyWith(color: theme.colorScheme.onSurface),
           ),
           const SizedBox(height: 8),
-          DisasterAlertCard(
-            title: 'Typhoon Signal No. 3',
-            level: 'SEVERE',
-            description: 'Typhoon "Karding" is directly affecting $location. Expect destructive winds and intense rainfall. Evacuate if in a low-lying area.',
-            levelColor: theme.colorScheme.error,
+          
+          if (_isLoadingAlert)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF374151),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_highestPriorityAlert != null)
+            DisasterAlertCard(
+              title: _highestPriorityAlert!.title,
+              level: _highestPriorityAlert!.level,
+              description: _highestPriorityAlert!.description,
+              levelColor: _getAlertColor(_highestPriorityAlert!.level),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade900.withOpacity(0.3),
+                border: Border.all(color: Colors.green.shade700),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green.shade400, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'No Active Alerts',
+                          style: TextStyle(
+                            color: Colors.green.shade400,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          'No disaster alerts affecting ${widget.location}',
+                          style: TextStyle(
+                            color: Colors.green.shade300,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          const SizedBox(height: 24),
+          
+          // Debug Button
+          ElevatedButton.icon(
+            onPressed: _showAlertDiagnostics,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade700,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            icon: const Icon(Icons.medical_services_outlined),
+            label: const Text(
+              'Alert System Diagnostics',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
           ),
+
           const SizedBox(height: 24),
           Text(
             "Tools & Resources",
@@ -197,12 +404,11 @@ class HomeScreen extends StatelessWidget {
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
             children: [
-              // Top row: Alerts, News Updates
               HomeGridButton(
                 text: 'Alerts',
                 icon: Icons.warning_amber_rounded,
-                color: theme.colorScheme.primary, // Red for high importance
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlertsScreen(location: location))),
+                color: theme.colorScheme.primary,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => AlertsScreen(location: widget.location))),
               ),
               HomeGridButton(
                 text: 'News Updates',
@@ -210,10 +416,9 @@ class HomeScreen extends StatelessWidget {
                 color: const Color(0xFFea580c),
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => NewsUpdatesScreen(location: location)),
+                  MaterialPageRoute(builder: (_) => NewsUpdatesScreen(location: widget.location)),
                 ),
               ),
-              // Middle row: Community, Emergency Hotlines
               HomeGridButton(
                 text: 'Community',
                 icon: Icons.people_alt_rounded,
@@ -226,20 +431,19 @@ class HomeScreen extends StatelessWidget {
               HomeGridButton(
                 text: 'Emergency Hotlines',
                 icon: Icons.phone_in_talk_rounded,
-                color: const Color(0xFF1d4ed8), // Blue for communication
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HotlinesScreen(location: location))),
+                color: const Color(0xFF1d4ed8),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => HotlinesScreen(location: widget.location))),
               ),
-              // Bottom row: Safety Checklist, First Aid & Safety
               HomeGridButton(
                 text: 'Safety Checklist',
                 icon: Icons.checklist_rtl_rounded,
-                color: const Color(0xFF15803d), // Green for preparedness
+                color: const Color(0xFF15803d),
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChecklistScreen())),
               ),
               HomeGridButton(
                 text: 'First Aid & Safety',
                 icon: Icons.health_and_safety_rounded,
-                color: const Color(0xFF7e22ce), // Purple for health
+                color: const Color(0xFF7e22ce),
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HealthSafetyScreen())),
               ),
             ],
