@@ -5,6 +5,7 @@ import 'package:disaster_awareness_app/services/community_service.dart';
 import 'package:disaster_awareness_app/screens/user_service.dart';
 import 'package:disaster_awareness_app/services/location_distance_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:cached_network_image/cached_network_image.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -297,12 +298,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFb91c1c),
+                    foregroundColor: Colors.white, 
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12),
                     ),
                     minimumSize: const Size.fromHeight(50),
-                  ),
+                    ),
                   child: const Text(
                     'Post to Community',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -494,6 +496,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
     final isLiked = (data['likedBy'] as List?)?.contains(currentUserId) ?? false;
     final timestamp = data['createdAt'] as Timestamp?;
     final timeAgo = timestamp != null ? timeago.format(timestamp.toDate()) : 'Just now';
+    final profilePictureUrl = data['profilePictureUrl'] as String?; // ✅ Get profile picture URL
 
     // Calculate distance
     final distance = LocationDistanceService.calculateDistance(
@@ -515,12 +518,19 @@ class _CommunityScreenState extends State<CommunityScreen> {
           children: [
             Row(
               children: [
+                // ✅ Display profile picture or default avatar
                 CircleAvatar(
+                  radius: 20,
                   backgroundColor: const Color(0xFFb91c1c),
-                  child: Text(
-                    (data['userName'] as String?)?.substring(0, 1).toUpperCase() ?? 'U',
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                  backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
+                      ? CachedNetworkImageProvider(profilePictureUrl)
+                      : null,
+                  child: profilePictureUrl == null || profilePictureUrl.isEmpty
+                      ? Text(
+                          (data['userName'] as String?)?.substring(0, 1).toUpperCase() ?? 'U',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

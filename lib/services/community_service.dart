@@ -23,9 +23,10 @@ class CommunityService {
     }
 
     try {
-      // Get user's name from users collection
+      // Get user's name and profile picture from users collection
       final userDoc = await _firestore.collection('users').doc(currentUserId).get();
       final userName = userDoc.data()?['displayName'] ?? userDoc.data()?['name'] ?? 'Anonymous';
+      final profilePictureUrl = userDoc.data()?['profilePictureUrl']; // ✅ Get profile picture URL
 
       final docRef = await _firestore.collection('community_posts').add({
         'title': title,
@@ -38,6 +39,7 @@ class CommunityService {
         'userId': currentUserId,
         'userName': userName,
         'userEmail': currentUserEmail,
+        'profilePictureUrl': profilePictureUrl, // ✅ Store profile picture URL
         'likes': 0,
         'likedBy': [],
         'commentCount': 0,
@@ -135,9 +137,10 @@ class CommunityService {
     }
 
     try {
-      // Get user's name
+      // Get user's name and profile picture
       final userDoc = await _firestore.collection('users').doc(currentUserId).get();
       final userName = userDoc.data()?['displayName'] ?? userDoc.data()?['name'] ?? 'Anonymous';
+      final profilePictureUrl = userDoc.data()?['profilePictureUrl']; // ✅ Get profile picture URL
 
       // Add comment to subcollection
       await _firestore
@@ -147,6 +150,7 @@ class CommunityService {
           .add({
         'userId': currentUserId,
         'userName': userName,
+        'profilePictureUrl': profilePictureUrl, // ✅ Store profile picture URL in comments too
         'comment': comment,
         'createdAt': FieldValue.serverTimestamp(),
       });
