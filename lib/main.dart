@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:disaster_awareness_app/services/fcm_service.dart';
 import 'app.dart';
+//import 'temp_uploader.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized(); 
+  WidgetsFlutterBinding.ensureInitialized();
 
   if (Firebase.apps.isEmpty) {
     if (kIsWeb) {
@@ -39,4 +40,5 @@ Future<void> main() async {
   ]);
 
   runApp(const DisasterReadyApp());
+  //runApp(const TempUploaderApp());
 }
