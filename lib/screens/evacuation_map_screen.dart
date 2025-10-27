@@ -6,6 +6,7 @@ import 'package:disaster_awareness_app/widgets/screen_header.dart';
 import 'package:url_launcher/url_launcher.dart'; // For launching directions
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart'
+
     as latlong; // Use 'as' to avoid name conflicts
 
 // Model for evacuation center
