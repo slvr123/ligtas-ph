@@ -10,34 +10,28 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  geolocator: ^11.0.0  # For GPS location
-  geocoding: ^3.0.0   # For address ↔ coordinates conversion
-  # google_maps_flutter: ^2.5.0  # <-- REMOVED (needs API key)
+  geolocator: ^11.0.0
+  geocoding: ^3.0.0
   google_fonts: ^6.2.1
   url_launcher: ^6.2.5
   timeago: ^3.6.1
-
-  http: ^1.1.0        # For fetching RSS feeds
-  xml: ^6.3.0         # For parsing RSS XML
+  http: ^1.1.0
+  xml: ^6.3.0
   cupertino_icons: ^1.0.8
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.8
   cloud_firestore: ^4.15.8
-
-  # ⭐ --- ADDED FOR OPENSTREETMAP ---
-  flutter_map: ^6.1.0 # For the free map view
-  latlong2: ^0.9.0    # Helper for flutter_map coordinates
-  # ⭐ --- END ADDED ---
-
-  # sos button
+  firebase_storage: ^11.0.0
+  image_picker: ^1.1.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
   get: ^4.6.6
   vibration: ^3.1.4
   torch_light: ^1.1.0
   audioplayers: ^6.0.0
-
-  #alerts
   firebase_messaging: ^14.7.0
-
+  cloudinary_public: ^0.21.0
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -47,4 +41,3 @@ flutter:
   uses-material-design: true
   assets:
     - assets/audio/
-

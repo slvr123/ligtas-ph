@@ -4,14 +4,20 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:disaster_awareness_app/widgets/profile_picture_widget.dart';
 
 typedef EditCallback = void Function();
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final String? currentLocation;
 
   const ProfileScreen({super.key, this.currentLocation});
 
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
   // Edit User Name Dialog
   void _editUserName(BuildContext context, String currentName) {
     final TextEditingController controller = TextEditingController(text: currentName);
@@ -329,10 +335,11 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                  child: Icon(Icons.person_rounded, size: 70, color: theme.colorScheme.primary),
+                // Profile Picture Widget
+                ProfilePictureWidget(
+                  onPictureUpdated: () {
+                    setState(() {});
+                  },
                 ),
                 const SizedBox(height: 20),
 
@@ -679,7 +686,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
     );
   }
 
-    Future<void> _makePhoneCall(BuildContext context, String phoneNumber) async {
+  Future<void> _makePhoneCall(BuildContext context, String phoneNumber) async {
     final String formattedNumber = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
     final Uri launchUri = Uri(
       scheme: 'tel',
@@ -779,7 +786,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                   trailing: PopupMenuButton(
                     icon: const Icon(Icons.more_vert),
                     itemBuilder: (context) => [
-                      // CALL BUTTON - Added at the top
                       const PopupMenuItem(
                         value: 'call',
                         child: Row(
