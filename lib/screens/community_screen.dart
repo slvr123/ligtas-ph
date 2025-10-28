@@ -6,6 +6,8 @@ import 'package:disaster_awareness_app/screens/user_service.dart';
 import 'package:disaster_awareness_app/services/location_distance_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
+// ⭐ 1. Import the new detail screen
+import 'package:disaster_awareness_app/screens/post_detail_screen.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -127,9 +129,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                                       Icon(
                                         category['icon'],
                                         size: 16,
-                                        color: selectedCategory == category['id']
-                                            ? Colors.white
-                                            : Colors.white70,
+                                        color:
+                                            selectedCategory == category['id']
+                                                ? Colors.white
+                                                : Colors.white70,
                                       ),
                                       const SizedBox(width: 6),
                                       Text(category['name']),
@@ -209,7 +212,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.location_on, color: Colors.white70),
+                            const Icon(Icons.location_on,
+                                color: Colors.white70),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Column(
@@ -275,8 +279,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       );
 
                       if (mounted) {
-                        Navigator.pop(context);
-                        Navigator.pop(context);
+                        Navigator.pop(context); // Close loading dialog
+                        Navigator.pop(context); // Close bottom sheet
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Post created successfully!'),
@@ -286,7 +290,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        Navigator.pop(context);
+                        Navigator.pop(context); // Close loading dialog
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Error: $e'),
@@ -298,13 +302,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFb91c1c),
-                    foregroundColor: Colors.white, 
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     minimumSize: const Size.fromHeight(50),
-                    ),
+                  ),
                   child: const Text(
                     'Post to Community',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -333,9 +337,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    _sortByDistance
-                        ? 'Sorted by distance'
-                        : 'Sorted by recent',
+                    _sortByDistance ? 'Sorted by distance' : 'Sorted by recent',
                   ),
                 ),
               );
@@ -395,7 +397,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
             child: StreamBuilder<QuerySnapshot>(
               stream: _selectedCategory == 'all'
                   ? _communityService.getAllPosts()
-                  : _communityService.getPostsByCategory(_selectedCategory, _userLocation),
+                  : _communityService.getPostsByCategory(
+                      _selectedCategory, _userLocation),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -406,11 +409,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                        const Icon(Icons.error_outline,
+                            size: 60, color: Colors.red),
                         const SizedBox(height: 16),
                         Text(
                           'Error loading posts',
-                          style: TextStyle(fontSize: 18, color: Colors.white.withOpacity(0.7)),
+                          style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.white.withOpacity(0.7)),
                         ),
                       ],
                     ),
@@ -450,21 +456,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   posts.sort((a, b) {
                     final dataA = a.data() as Map<String, dynamic>;
                     final dataB = b.data() as Map<String, dynamic>;
-                    
+
                     final distA = LocationDistanceService.calculateDistance(
                       _userLatitude,
                       _userLongitude,
                       dataA['latitude'] ?? 0.0,
                       dataA['longitude'] ?? 0.0,
                     );
-                    
+
                     final distB = LocationDistanceService.calculateDistance(
                       _userLatitude,
                       _userLongitude,
                       dataB['latitude'] ?? 0.0,
                       dataB['longitude'] ?? 0.0,
                     );
-                    
+
                     return distA.compareTo(distB);
                   });
                 }
@@ -492,11 +498,15 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildPostCard(String postId, Map<String, dynamic> data) {
+    final theme = Theme.of(context); // Get theme from State
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    final isLiked = (data['likedBy'] as List?)?.contains(currentUserId) ?? false;
+    final isLiked =
+        (data['likedBy'] as List?)?.contains(currentUserId) ?? false;
     final timestamp = data['createdAt'] as Timestamp?;
-    final timeAgo = timestamp != null ? timeago.format(timestamp.toDate()) : 'Just now';
-    final profilePictureUrl = data['profilePictureUrl'] as String?; // ✅ Get profile picture URL
+    final timeAgo =
+        timestamp != null ? timeago.format(timestamp.toDate()) : 'Just now';
+    final profilePictureUrl = data['profilePictureUrl'] as String? ?? '';
+    final commentCount = data['commentCount'] ?? 0; // ⭐ Get comment count
 
     // Calculate distance
     final distance = LocationDistanceService.calculateDistance(
@@ -511,199 +521,270 @@ class _CommunityScreenState extends State<CommunityScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       color: const Color(0xFF1f2937),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                // ✅ Display profile picture or default avatar
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: const Color(0xFFb91c1c),
-                  backgroundImage: profilePictureUrl != null && profilePictureUrl.isNotEmpty
-                      ? CachedNetworkImageProvider(profilePictureUrl)
-                      : null,
-                  child: profilePictureUrl == null || profilePictureUrl.isEmpty
-                      ? Text(
-                          (data['userName'] as String?)?.substring(0, 1).toUpperCase() ?? 'U',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data['userName'] ?? 'Anonymous',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on,
-                            size: 14,
-                            color: Colors.white.withOpacity(0.5),
+      // ⭐ Wrap Card in InkWell to make it tappable
+      child: InkWell(
+        onTap: () {
+          // ⭐ Navigate to PostDetailScreen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PostDetailScreen(
+                postId: postId,
+                postData: data,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: const Color(0xFFb91c1c),
+                    backgroundImage: profilePictureUrl.isNotEmpty
+                        ? CachedNetworkImageProvider(profilePictureUrl)
+                        : null,
+                    child: (profilePictureUrl.isEmpty)
+                        ? Text(
+                            (data['userName'] as String?)
+                                    ?.substring(0, 1)
+                                    .toUpperCase() ??
+                                'U',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold),
+                          )
+                        : null,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data['userName'] ?? 'Anonymous',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              distanceString,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.location_on,
+                              size: 14,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                distanceString,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.5),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              timeAgo,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.white.withOpacity(0.5),
                               ),
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            timeAgo,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withOpacity(0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getCategoryColor(data['category']),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    data['category']?.toUpperCase() ?? 'OTHER',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              data['title'] ?? 'Untitled',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              data['description'] ?? '',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.white70,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: isLiked ? Colors.red : Colors.white70,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(data['category']),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      data['category']?.toUpperCase() ?? 'OTHER',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-                  onPressed: () async {
-                    try {
-                      await _communityService.toggleLike(postId);
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
-                    }
-                  },
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                data['title'] ?? 'Untitled',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
-                Text(
-                  '${data['likes'] ?? 0}',
-                  style: const TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                data['description'] ?? '',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
                 ),
-                const SizedBox(width: 16),
-                const Icon(Icons.comment_outlined, color: Colors.white70),
-                const SizedBox(width: 8),
-                Text(
-                  '${data['commentCount'] ?? 0}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const Spacer(),
-                if (currentUserId == data['userId'])
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.white70),
-                    onSelected: (value) async {
-                      if (value == 'delete') {
-                        try {
-                          await _communityService.deletePost(postId, data['userId']);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Post deleted')),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        }
-                      } else if (value == 'resolve') {
-                        try {
-                          await _communityService.markAsResolved(postId, data['userId']);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Marked as resolved')),
-                            );
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        }
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.red : Colors.white70,
+                    ),
+                    onPressed: () async {
+                      try {
+                        await _communityService.toggleLike(postId);
+                      } catch (e) {
+                        if (mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
                       }
                     },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'resolve',
-                        child: Row(
-                          children: [
-                            Icon(Icons.check_circle_outline, color: Colors.green),
-                            SizedBox(width: 8),
-                            Text('Mark as Resolved'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete Post'),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
-              ],
-            ),
-          ],
+                  Text(
+                    '${data['likes'] ?? 0}',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(width: 16),
+                  // ⭐ Make comment icon/text tappable
+                  InkWell(
+                    onTap: () {
+                      // ⭐ Navigate to PostDetailScreen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostDetailScreen(
+                            postId: postId,
+                            postData: data,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.comment_outlined,
+                          color: Colors.white70,
+                          size: 20,
+                        ), // smaller icon
+                        const SizedBox(width: 8),
+                        Text(
+                          '$commentCount', // ⭐ Use commentCount
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (currentUserId == data['userId'])
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert, color: Colors.white70),
+                      onSelected: (value) async {
+                        if (value == 'delete') {
+                          bool? confirmDelete = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                    title: const Text('Delete Post?'),
+                                    content: const Text(
+                                        'Are you sure you want to delete this post and all its comments? This cannot be undone.'),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, false),
+                                          child: const Text('Cancel')),
+                                      TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context, true),
+                                          style: TextButton.styleFrom(
+                                              foregroundColor: Colors.red),
+                                          child: const Text('Delete')),
+                                    ],
+                                  ));
+                          if (confirmDelete != true) return;
+
+                          try {
+                            await _communityService.deletePost(
+                                postId, data['userId']);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Post deleted')),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          }
+                        } else if (value == 'resolve') {
+                          try {
+                            await _communityService.markAsResolved(
+                                postId, data['userId']);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Marked as resolved')),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'resolve',
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle_outline,
+                                  color: Colors.green),
+                              SizedBox(width: 8),
+                              Text('Mark as Resolved'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, color: Colors.red),
+                              SizedBox(width: 8),
+                              Text('Delete Post'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

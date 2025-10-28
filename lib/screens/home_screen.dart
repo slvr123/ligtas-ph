@@ -138,6 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /*
+  // Commented out Alert System Diagnostics
   void _showAlertDiagnostics() async {
     showDialog(
       context: context,
@@ -199,52 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  Future<List<Widget>> _getDebugInfo() async {
-    final alertService = AlertService();
-    await alertService.fetchAlerts();
-
-    final widgets = <Widget>[];
-    for (var info in alertService.debugInfo) {
-      final statusIcon = info.status == 'SUCCESS'
-          ? '✅'
-          : info.status == 'ERROR'
-              ? '❌'
-              : '⚠️';
-      widgets.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade700),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('$statusIcon ${info.source}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 12)),
-                Text('Status: ${info.status}',
-                    style: const TextStyle(fontSize: 11)),
-                Text(
-                    'Fetched: ${info.totalFetched} | Active: ${info.activeAlerts}',
-                    style: const TextStyle(fontSize: 11)),
-                if (info.errorMessage != null)
-                  Text('Error: ${info.errorMessage}',
-                      style: const TextStyle(fontSize: 10, color: Colors.red)),
-                if (info.sampleAlerts != null && info.sampleAlerts!.isNotEmpty)
-                  Text('Sample: ${info.sampleAlerts!.join(", ")}',
-                      style: const TextStyle(fontSize: 10)),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    return widgets;
-  }
+  */
 
   @override
   Widget build(BuildContext context) {
@@ -394,7 +351,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           const SizedBox(height: 24),
-          // Debug Button
+
+          // Commented out Alert System Diagnostics button
+          /*
           ElevatedButton.icon(
             onPressed: _showAlertDiagnostics,
             style: ElevatedButton.styleFrom(
@@ -408,6 +367,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(height: 24),
+          */
+
           Text(
             "Tools & Resources",
             style: theme.textTheme.headlineMedium
@@ -478,7 +439,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => HealthSafetyScreen(
-                      // Pass the required data
                       location: widget.location,
                       latitude: widget.latitude,
                       longitude: widget.longitude,

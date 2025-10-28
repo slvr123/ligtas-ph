@@ -24,9 +24,13 @@ class CommunityService {
 
     try {
       // Get user's name and profile picture from users collection
-      final userDoc = await _firestore.collection('users').doc(currentUserId).get();
-      final userName = userDoc.data()?['displayName'] ?? userDoc.data()?['name'] ?? 'Anonymous';
-      final profilePictureUrl = userDoc.data()?['profilePictureUrl']; // ✅ Get profile picture URL
+      final userDoc =
+          await _firestore.collection('users').doc(currentUserId).get();
+      final userName = userDoc.data()?['displayName'] ??
+          userDoc.data()?['name'] ??
+          'Anonymous';
+      final profilePictureUrl =
+          userDoc.data()?['profilePictureUrl']; // ✅ Get profile picture URL
 
       final docRef = await _firestore.collection('community_posts').add({
         'title': title,
@@ -42,7 +46,7 @@ class CommunityService {
         'profilePictureUrl': profilePictureUrl, // ✅ Store profile picture URL
         'likes': 0,
         'likedBy': [],
-        'commentCount': 0,
+        'commentCount': 0, // Starts at 0
         'status': 'active', // active, resolved, flagged
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -57,9 +61,8 @@ class CommunityService {
 
   // Get posts for a specific location (city-based)
   Stream<QuerySnapshot> getPostsByLocation(String location) {
-    // Extract city name from "City, Province" format
     String city = location.split(',')[0].trim();
-    
+
     return _firestore
         .collection('community_posts')
         .where('location', isGreaterThanOrEqualTo: city)
@@ -71,7 +74,7 @@ class CommunityService {
         .snapshots();
   }
 
-  // ✅ FIXED: Get all posts - simplified query that doesn't need index
+  // Get all posts
   Stream<QuerySnapshot> getAllPosts() {
     return _firestore
         .collection('community_posts')
@@ -100,14 +103,14 @@ class CommunityService {
     try {
       final postRef = _firestore.collection('community_posts').doc(postId);
       final postDoc = await postRef.get();
-      
+
       if (!postDoc.exists) {
         throw Exception('Post not found');
       }
 
       final data = postDoc.data()!;
       final List<dynamic> likedBy = data['likedBy'] ?? [];
-      
+
       if (likedBy.contains(currentUserId)) {
         // Unlike
         await postRef.update({
@@ -127,7 +130,7 @@ class CommunityService {
     }
   }
 
-  // Add a comment to a post
+  // ⭐ MODIFIED: Add a comment using a transaction
   Future<void> addComment({
     required String postId,
     required String comment,
@@ -138,27 +141,33 @@ class CommunityService {
 
     try {
       // Get user's name and profile picture
-      final userDoc = await _firestore.collection('users').doc(currentUserId).get();
-      final userName = userDoc.data()?['displayName'] ?? userDoc.data()?['name'] ?? 'Anonymous';
-      final profilePictureUrl = userDoc.data()?['profilePictureUrl']; // ✅ Get profile picture URL
+      final userDoc =
+          await _firestore.collection('users').doc(currentUserId).get();
+      final userName = userDoc.data()?['displayName'] ??
+          userDoc.data()?['name'] ??
+          'Anonymous';
+      final profilePictureUrl = userDoc.data()?['profilePictureUrl'];
 
-      // Add comment to subcollection
-      await _firestore
-          .collection('community_posts')
-          .doc(postId)
-          .collection('comments')
-          .add({
-        'userId': currentUserId,
-        'userName': userName,
-        'profilePictureUrl': profilePictureUrl, // ✅ Store profile picture URL in comments too
-        'comment': comment,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      final postRef = _firestore.collection('community_posts').doc(postId);
+      final commentRef =
+          postRef.collection('comments').doc(); // New comment doc
 
-      // Increment comment count
-      await _firestore.collection('community_posts').doc(postId).update({
-        'commentCount': FieldValue.increment(1),
-        'updatedAt': FieldValue.serverTimestamp(),
+      // Run as a transaction to ensure count updates
+      await _firestore.runTransaction((transaction) async {
+        // 1. Add the new comment
+        transaction.set(commentRef, {
+          'userId': currentUserId,
+          'userName': userName,
+          'profilePictureUrl': profilePictureUrl,
+          'comment': comment, // Use 'comment' key
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // 2. Increment the commentCount on the main post
+        transaction.update(postRef, {
+          'commentCount': FieldValue.increment(1),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       });
     } catch (e) {
       print('Error adding comment: $e');
@@ -172,8 +181,35 @@ class CommunityService {
         .collection('community_posts')
         .doc(postId)
         .collection('comments')
-        .orderBy('createdAt', descending: false)
+        .orderBy('createdAt', descending: false) // Show oldest first
         .snapshots();
+  }
+
+  // ⭐ NEW: Delete a comment using a transaction
+  Future<void> deleteComment(String postId, String commentId) async {
+    if (currentUserId == null) {
+      throw Exception('User not logged in');
+    }
+
+    final postRef = _firestore.collection('community_posts').doc(postId);
+    final commentRef = postRef.collection('comments').doc(commentId);
+
+    // Note: Your Firestore rules will handle security (check if user is owner)
+
+    try {
+      await _firestore.runTransaction((transaction) async {
+        // 1. Delete the comment
+        transaction.delete(commentRef);
+        // 2. Decrement the commentCount
+        transaction.update(postRef, {
+          'commentCount': FieldValue.increment(-1),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      });
+    } catch (e) {
+      print('Error deleting comment: $e');
+      throw Exception('Failed to delete comment: $e');
+    }
   }
 
   // Delete a post (only by owner)
@@ -187,6 +223,8 @@ class CommunityService {
     }
 
     try {
+      // Note: This does not delete subcollections. For full deletion,
+      // you'd need a Cloud Function. Marking as 'deleted' is safer.
       await _firestore.collection('community_posts').doc(postId).update({
         'status': 'deleted',
         'updatedAt': FieldValue.serverTimestamp(),
