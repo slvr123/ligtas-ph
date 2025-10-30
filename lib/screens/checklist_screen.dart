@@ -12,11 +12,8 @@ class ChecklistScreen extends StatefulWidget {
 
 class _ChecklistScreenState extends State<ChecklistScreen> {
   final UserService _userService = UserService();
-  // Keys are "CategoryName::ItemTitle"
   Map<String, bool> _checklistState = {};
   bool _isLoading = true;
-
-  // Map stores custom categories and their items
   Map<String, List<String>> _customCategories = {};
 
   static const String goBagCategory = 'Emergency Go Bag';
@@ -35,6 +32,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     'Phone with power bank',
     'Face masks',
   ];
+  
   final List<String> _homeItems = const [
     'Secure heavy furniture to walls',
     'Know location of gas, water, and electricity shutoffs',
@@ -43,11 +41,95 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     'Designate a safe meeting place',
   ];
 
+  final Map<String, Map<String, String>> _itemDetails = {
+    'Bottled water (1 gallon per person per day)': {
+      'detail': 'assets/audio/images/water_detail.jpg',
+      'tips': 'Store in cool, dry place. Rotate every 6 months. Plan for 3 days minimum.',
+    },
+    'Non-perishable food (good for 3 days)': {
+      'detail': 'assets/audio/images/food_detail.jpg',
+      'tips': 'Include canned goods, energy bars, dried fruits. Check expiration dates.',
+    },
+    'Flashlight with extra batteries': {
+      'detail': 'assets/audio/images/flashlight_detail.jpg',
+      'tips': 'LED flashlights last longer. Store batteries separately to prevent drain.',
+    },
+    'First-aid kit': {
+      'detail': 'assets/audio/images/firstaid_detail.jpg',
+      'tips': 'Include bandages, antiseptic, pain relievers, and personal medications.',
+    },
+    'Whistle to signal for help': {
+      'detail': 'assets/audio/images/whistle_detail.jpg',
+      'tips': 'Louder than voice. Use 3 short blasts to signal distress.',
+    },
+    'Copies of important documents (passports, IDs)': {
+      'detail': 'assets/audio/images/passport_detail.jpg',
+      'tips': 'Store in waterproof bag. Include insurance papers and contact info.',
+    },
+    'Cash in small denominations': {
+      'detail': 'assets/audio/images/cash_detail.jpg',
+      'tips': 'ATMs may not work. Keep bills under ₱100 for easier transactions.',
+    },
+    'Medications and prescription info': {
+      'detail': 'assets/audio/images/meds_detail.jpg',
+      'tips': 'Include prescription copies. Update regularly. Store in cool place.',
+    },
+    'Phone with power bank': {
+      'detail': 'assets/audio/images/phone_detail.jpg',
+      'tips': 'Keep power bank charged. Include charging cables. Save emergency contacts.',
+    },
+    'Face masks': {
+      'detail': 'assets/audio/images/facemask_detail.jpg',
+      'tips': 'N95 masks protect from dust and smoke. Include several per person.',
+    },
+    'Secure heavy furniture to walls': {
+      'detail': 'assets/audio/images/furniture_detail.jpg',
+      'tips': 'Use L-brackets for bookcases. Prevents tipping during earthquakes.',
+    },
+    'Know location of gas, water, and electricity shutoffs': {
+      'detail': 'assets/audio/images/shutoff_detail.jpg',
+      'tips': 'Label valves. Keep wrench nearby. Teach all family members.',
+    },
+    'Check fire extinguisher expiration date': {
+      'detail': 'assets/audio/images/extinguisher_detail.jpg',
+      'tips': 'Check pressure gauge monthly. Replace if expired. Learn PASS technique.',
+    },
+    'Prepare a family emergency plan': {
+      'detail': 'assets/audio/images/plan_detail.jpg',
+      'tips': 'Include evacuation routes. Assign roles. Practice twice yearly.',
+    },
+    'Designate a safe meeting place': {
+      'detail': 'assets/audio/images/meeting_detail.jpg',
+      'tips': 'Choose a nearby and distant location. Share with all family members.',
+    },
+  };
+  
   String _getUniqueKey(String category, String itemTitle) {
     return "$category::$itemTitle";
   }
 
-  // Get all items for category (includes predefined, custom list, and potentially orphans from state)
+  IconData _getIconForItem(String itemTitle) {
+    final titleLower = itemTitle.toLowerCase();
+    
+    if (titleLower.contains('water')) return Icons.water_drop_outlined;
+    if (titleLower.contains('food')) return Icons.fastfood_outlined;
+    if (titleLower.contains('flashlight')) return Icons.flashlight_on;
+    if (titleLower.contains('first-aid')) return Icons.medical_services_outlined;
+    if (titleLower.contains('whistle')) return Icons.campaign_outlined;
+    if (titleLower.contains('documents') || titleLower.contains('passport')) return Icons.description_outlined;
+    if (titleLower.contains('cash')) return Icons.attach_money_outlined;
+    if (titleLower.contains('medications')) return Icons.medication_outlined;
+    if (titleLower.contains('phone') || titleLower.contains('power bank')) return Icons.battery_charging_full_outlined;
+    if (titleLower.contains('mask')) return Icons.masks_outlined;
+    if (titleLower.contains('secure heavy furniture')) return Icons.security_outlined;
+    if (titleLower.contains('shutoffs')) return Icons.electrical_services_outlined;
+    if (titleLower.contains('fire extinguisher')) return Icons.fire_extinguisher_outlined;
+    if (titleLower.contains('plan')) return Icons.groups_outlined;
+    if (titleLower.contains('meeting place')) return Icons.place_outlined;
+    
+    return Icons.format_list_bulleted;
+  }
+
   List<String> _getAllItemsForCategory(String category) {
     List<String> combinedItems;
     List<String> customItemsForCategory = _customCategories[category] ?? [];
@@ -61,29 +143,13 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           .where((key) => key.startsWith("$category::"))
           .map((key) {
             final parts = key.split("::");
-            return parts.length > 1 ? parts[1] : ''; // Get item part
+            return parts.length > 1 ? parts[1] : '';
           })
-          .where((item) => item.isNotEmpty) // Ensure item part exists
+          .where((item) => item.isNotEmpty)
           .toList();
       combinedItems = [...customItemsForCategory, ...itemsFromState];
     }
-    return Set<String>.from(combinedItems).toList(); // Use Set for uniqueness
-  }
-
-  List<String> get _allItemsAcrossCategories {
-    List<String> all = [..._goBagItems, ..._homeItems];
-    _customCategories.forEach((_, items) {
-      all.addAll(items);
-    });
-    for (var key in _checklistState.keys) {
-      if (key.contains("::")) {
-        final parts = key.split("::");
-        if (parts.length > 1 && parts[1].isNotEmpty) {
-          all.add(parts[1]);
-        }
-      }
-    }
-    return Set<String>.from(all).toList();
+    return Set<String>.from(combinedItems).toList();
   }
 
   @override
@@ -93,20 +159,17 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   }
 
   Future<void> _loadChecklistData() async {
-    // Avoid calling setState if the widget is disposed
     if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
     try {
       final data = await _userService.getChecklistData();
-      // Check mounted again *after* the await
       if (mounted) {
         setState(() {
           _checklistState = data['checklistState'] ?? {};
           _customCategories = data['customChecklistCategories'] ?? {};
-          print(
-              "Loaded Data: State=$_checklistState, CustomCats=$_customCategories");
+          print("Loaded Data: State=$_checklistState, CustomCats=$_customCategories");
           _isLoading = false;
         });
       }
@@ -122,20 +185,16 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     }
   }
 
-  // ⭐ USING THE SIMPLIFIED Save Function - No cleanup logic here
   Future<void> _saveChecklistData() async {
-    // Create copies right before saving
     final Map<String, bool> stateToSave = Map.from(_checklistState);
     final Map<String, List<String>> categoriesToSave = {};
     _customCategories.forEach((key, value) {
-      categoriesToSave[key] = List.from(value); // Copy list
+      categoriesToSave[key] = List.from(value);
     });
 
-    print(
-        "Attempting to save: State=$stateToSave, CustomCats=$categoriesToSave");
+    print("Attempting to save: State=$stateToSave, CustomCats=$categoriesToSave");
 
     try {
-      // Use the UserService function which now uses update()
       await _userService.saveChecklistData(
         checklistState: stateToSave,
         customCategories: categoriesToSave,
@@ -152,21 +211,18 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     }
   }
 
-  // Make handleItemChanged async to await save
   Future<void> _handleItemChanged(
       String category, String itemTitle, bool isChecked) async {
     if (!mounted) return;
     setState(() {
       final uniqueKey = _getUniqueKey(category, itemTitle);
       _checklistState[uniqueKey] = isChecked;
-      print(
-          "Check state changed for $uniqueKey to $isChecked (Local State: $_checklistState)");
+      print("Check state changed for $uniqueKey to $isChecked (Local State: $_checklistState)");
     });
     await _saveChecklistData();
     print("Data saved after check change.");
   }
 
-  // ⭐ Make _deleteCustomItem async and ENSURE state removal before save
   Future<void> _deleteCustomItem(String itemTitle, String category) async {
     if (!mounted) return;
 
@@ -188,7 +244,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context, true);
-                  }, // Just return true
+                  },
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
                   child: const Text('Delete'),
                 ),
@@ -197,25 +253,20 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
     if (confirmed == true && mounted) {
       print("Delete confirmed by user.");
-      bool removedFromStateInSetState = false; // Flag to check removal success
+      bool removedFromStateInSetState = false;
 
-      // Perform ALL local state updates within a single setState call
       setState(() {
         print("Inside setState for delete...");
         final lowerCaseTitleToDelete = itemTitle.toLowerCase();
 
-        // 1. Remove from the custom category list
         bool removedFromList = false;
         if (_customCategories.containsKey(category)) {
           int initialLength = _customCategories[category]?.length ?? 0;
           _customCategories[category]?.removeWhere(
               (item) => item.toLowerCase() == lowerCaseTitleToDelete);
-          removedFromList =
-              (_customCategories[category]?.length ?? 0) < initialLength;
-          print(
-              "  Removed '$itemTitle' from _customCategories['$category'] list: $removedFromList");
+          removedFromList = (_customCategories[category]?.length ?? 0) < initialLength;
+          print("  Removed '$itemTitle' from _customCategories['$category'] list: $removedFromList");
 
-          // Clean up the custom category map key if list becomes empty and it's not a standard one
           if ((_customCategories[category]?.isEmpty ?? false) &&
               category != goBagCategory &&
               category != homeCategory &&
@@ -227,22 +278,15 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           print("  Category '$category' not found in _customCategories map.");
         }
 
-        // 2. **CRUCIAL:** Remove the specific check state entry
         print("  Attempting to remove state key: $uniqueKeyToDelete");
         print("  State map BEFORE removal: $_checklistState");
-        // Use remove method which returns the value removed, or null if key not found
         var removedValue = _checklistState.remove(uniqueKeyToDelete);
-        removedFromStateInSetState =
-            removedValue != null; // Capture success/failure
+        removedFromStateInSetState = removedValue != null;
         print("  State map AFTER removal: $_checklistState");
-        print(
-            "  State key removed inside setState: $removedFromStateInSetState. (Removed value: $removedValue)");
-      }); // End of setState
+        print("  State key removed inside setState: $removedFromStateInSetState. (Removed value: $removedValue)");
+      });
 
-      // 3. Wait for the save operation AFTER setState has fully completed
-      print(
-          "Calling _saveChecklistData AFTER setState (state key removed successfully: $removedFromStateInSetState)...");
-      // Only save if the state removal was successful locally
+      print("Calling _saveChecklistData AFTER setState (state key removed successfully: $removedFromStateInSetState)...");
       if (removedFromStateInSetState) {
         await _saveChecklistData();
         print("--- Deletion process complete for '$itemTitle' ---");
@@ -251,8 +295,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text(
-                    'Error: Could not remove item state locally. Deletion may not persist.'),
+                content: Text('Error: Could not remove item state locally. Deletion may not persist.'),
                 backgroundColor: Colors.orange),
           );
         }
@@ -262,7 +305,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     }
   }
 
-  // Helper function to build sorted list tiles
   List<Widget> _buildSortedTiles(String category) {
     List<String> predefinedItems = [];
     if (category == goBagCategory) {
@@ -278,33 +320,26 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       return [const SizedBox.shrink()];
     }
 
-    // --- Sorting Logic ---
     final uncheckedItems = allItemsInCategory
-        .where((item) =>
-            !(_checklistState[_getUniqueKey(category, item)] ?? false))
+        .where((item) => !(_checklistState[_getUniqueKey(category, item)] ?? false))
         .toList();
     final checkedItems = allItemsInCategory
-        .where(
-            (item) => (_checklistState[_getUniqueKey(category, item)] ?? false))
+        .where((item) => (_checklistState[_getUniqueKey(category, item)] ?? false))
         .toList();
     final uncheckedPredefined = uncheckedItems
-        .where((i) =>
-            predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
+        .where((i) => predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
         .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final uncheckedCustom = uncheckedItems
-        .where((i) =>
-            !predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
+        .where((i) => !predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
         .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final checkedPredefined = checkedItems
-        .where((i) =>
-            predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
+        .where((i) => predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
         .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final checkedCustom = checkedItems
-        .where((i) =>
-            !predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
+        .where((i) => !predefinedItems.any((pi) => pi.toLowerCase() == i.toLowerCase()))
         .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
     final sortedItems = [
@@ -313,41 +348,39 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       ...checkedPredefined,
       ...checkedCustom
     ];
-    // --- End Sorting Logic ---
 
-    return sortedItems.map((item) {
+    return sortedItems.map<Widget>((item) {
       final uniqueKey = _getUniqueKey(category, item);
       final bool isChecked = _checklistState[uniqueKey] ?? false;
-
-      // Deletable IF the item name (case-insensitive) is NOT found in the predefinedItems list for THIS specific category.
       final bool allowDelete = !predefinedItems
           .any((predefined) => predefined.toLowerCase() == item.toLowerCase());
-
-      // Visual distinction based on deletability
       final bool isCustomForDisplay = allowDelete;
+      final IconData itemIcon = _getIconForItem(item);
+
+      final itemDetail = _itemDetails[item];
+      final String? detailImagePath = itemDetail?['detail'];
+      final String? tips = itemDetail?['tips'];
 
       return ChecklistTile(
-        key: ValueKey(uniqueKey), // Use unique key
+        key: ValueKey(uniqueKey),
         title: item,
         initialValue: isChecked,
         isCustom: isCustomForDisplay,
+        leadingIcon: itemIcon,
+        detailImagePath: detailImagePath,
+        tips: tips,
         onChanged: (isChecked) async {
-          // Make onChanged async
-          await _handleItemChanged(
-              category, item, isChecked); // Await the save here too
+          await _handleItemChanged(category, item, isChecked);
         },
         onDelete: allowDelete
             ? () async {
-                // Make onDelete async
-                await _deleteCustomItem(
-                    item, category); // Await the deletion process
+                await _deleteCustomItem(item, category);
               }
             : null,
       );
     }).toList();
   }
 
-  // Dialog to add item (async for save)
   void _showAddItemDialog() {
     if (!mounted) return;
     final TextEditingController itemController = TextEditingController();
@@ -359,8 +392,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       homeCategory,
       otherCategory,
       ..._customCategories.keys
-          .where((k) =>
-              k != goBagCategory && k != homeCategory && k != otherCategory)
+          .where((k) => k != goBagCategory && k != homeCategory && k != otherCategory)
           .toList()
         ..sort()
     ];
@@ -381,8 +413,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         .map((category) => RadioListTile<String>(
                               title: Text(category),
                               value: category,
-                              groupValue:
-                                  useNewCategory ? null : selectedCategoryValue,
+                              groupValue: useNewCategory ? null : selectedCategoryValue,
                               onChanged: (String? value) {
                                 if (value != null) {
                                   setDialogState(() {
@@ -446,7 +477,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 TextButton(
                   child: const Text('Add'),
                   onPressed: () async {
-                    // Make Add button async
                     final newItem = itemController.text.trim();
                     final String categoryToAdd;
                     if (useNewCategory) {
@@ -455,18 +485,14 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text(
-                                      'New category name cannot be empty.'),
+                                  content: Text('New category name cannot be empty.'),
                                   backgroundColor: Colors.red));
                         }
                         return;
                       }
-                      if (categoryToAdd.toLowerCase() ==
-                              goBagCategory.toLowerCase() ||
-                          categoryToAdd.toLowerCase() ==
-                              homeCategory.toLowerCase() ||
-                          categoryToAdd.toLowerCase() ==
-                              otherCategory.toLowerCase()) {
+                      if (categoryToAdd.toLowerCase() == goBagCategory.toLowerCase() ||
+                          categoryToAdd.toLowerCase() == homeCategory.toLowerCase() ||
+                          categoryToAdd.toLowerCase() == otherCategory.toLowerCase()) {
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                               content: Text(
@@ -481,8 +507,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content:
-                                    Text('Please select or create a category.'),
+                                content: Text('Please select or create a category.'),
                                 backgroundColor: Colors.red));
                       }
                       return;
@@ -491,16 +516,14 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content:
-                                    Text('Item description cannot be empty.'),
+                                content: Text('Item description cannot be empty.'),
                                 backgroundColor: Colors.red));
                       }
                       return;
                     }
-                    final categoryItemsLower =
-                        _getAllItemsForCategory(categoryToAdd)
-                            .map((i) => i.toLowerCase())
-                            .toList();
+                    final categoryItemsLower = _getAllItemsForCategory(categoryToAdd)
+                        .map((i) => i.toLowerCase())
+                        .toList();
                     if (categoryItemsLower.contains(newItem.toLowerCase())) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -511,24 +534,21 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       return;
                     }
 
-                    // Perform state update synchronously
                     if (mounted) {
                       setState(() {
                         _customCategories.putIfAbsent(categoryToAdd, () => []);
                         _customCategories[categoryToAdd]!.add(newItem);
                         final uniqueKey = _getUniqueKey(categoryToAdd, newItem);
                         _checklistState[uniqueKey] = false;
-                        print(
-                            "Adding item '$newItem' to category '$categoryToAdd' with key '$uniqueKey'");
+                        print("Adding item '$newItem' to category '$categoryToAdd' with key '$uniqueKey'");
                       });
                     } else {
                       return;
-                    } // Don't proceed if widget is gone
+                    }
 
-                    // Await save AFTER state update
                     await _saveChecklistData();
                     if (context.mounted) {
-                      Navigator.of(context).pop(); // Close dialog safely
+                      Navigator.of(context).pop();
                     }
                   },
                 ),
@@ -542,7 +562,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    /* ... same build logic ... */
     final customKeys = _customCategories.keys.toList();
     final Set<String> categorySet = {
       goBagCategory,
@@ -560,6 +579,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         if (b == otherCategory) return 1;
         return a.toLowerCase().compareTo(b.toLowerCase());
       });
+    
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddItemDialog,
@@ -596,9 +616,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                       if (!showSection) return const SizedBox.shrink();
                       return Padding(
                         padding: EdgeInsets.only(
-                            bottom: (index == allCategoryNames.length - 1)
-                                ? 0
-                                : 24.0),
+                            bottom: (index == allCategoryNames.length - 1) ? 0 : 24.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -610,8 +628,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                                 categoryTiles.first is SizedBox &&
                                 (categoryTiles.first as SizedBox).height == 0)
                               Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 8.0, top: 4.0),
+                                padding: const EdgeInsets.only(left: 8.0, top: 4.0),
                                 child: Text('No items added yet.',
                                     style: TextStyle(
                                         color: Colors.grey[600],
