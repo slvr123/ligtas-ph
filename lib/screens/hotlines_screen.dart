@@ -39,6 +39,7 @@ class HotlinesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hotlineService = HotlineService();
+    // Fetch local hotlines outside the ListView for clarity
     final localHotlines = hotlineService.getLocalHotlines(location);
 
     return Scaffold(
@@ -52,7 +53,67 @@ class HotlinesScreen extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // --- National Hotlines Section ---
+                // --- 1. Local Hotlines Section (MOVED TO TOP) ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    "Local Hotlines ($location)",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                // Show local hotlines or message if none available
+                if (localHotlines.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.amber.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'No specific local hotlines available for $location yet. Using national hotlines below.',
+                              style: TextStyle(
+                                color: Colors.amber.shade700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...localHotlines.map((hotline) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: HotlineCard(
+                        agency: hotline.agency,
+                        number: hotline.number,
+                        onCall: () => _makePhoneCall(context, hotline.number),
+                      ),
+                    );
+                  }).toList(),
+
+                const SizedBox(height: 24), // Separator
+
+                // --- 2. National Hotlines Section (MOVED TO BOTTOM) ---
                 const Padding(
                   padding: EdgeInsets.only(bottom: 8.0),
                   child: Text(
@@ -107,66 +168,6 @@ class HotlinesScreen extends StatelessWidget {
                   number: '136',
                   onCall: () => _makePhoneCall(context, '136'),
                 ),
-
-                const SizedBox(height: 24),
-
-                // --- Local Hotlines Section ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Local Hotlines ($location)",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-
-                // Show local hotlines or message if none available
-                if (localHotlines.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.amber.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.amber.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'No specific local hotlines available for $location yet. Use national hotlines above.',
-                              style: TextStyle(
-                                color: Colors.amber.shade700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ...localHotlines.map((hotline) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: HotlineCard(
-                        agency: hotline.agency,
-                        number: hotline.number,
-                        onCall: () => _makePhoneCall(context, hotline.number),
-                      ),
-                    );
-                  }).toList(),
               ],
             ),
           ),
