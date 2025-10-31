@@ -40,5 +40,5 @@ Future<void> main() async {
   ]);
 
   runApp(const DisasterReadyApp());
-  //runApp(const TempUploaderApp());
+  //runApp(const MyApp());
 }

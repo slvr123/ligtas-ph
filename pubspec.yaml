@@ -37,9 +37,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1  # <-- ADD THIS LINE
 
 flutter:
   uses-material-design: true
   assets:
     - assets/audio/emergency_alert.mp3  # Specific file
     - assets/audio/images/  
+
+  # --- ADD THIS ENTIRE SECTION AT THE BOTTOM ---
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/audio/images/ewan.jpg"   # <-- This points to your logo
+  min_sdk_android: 21
