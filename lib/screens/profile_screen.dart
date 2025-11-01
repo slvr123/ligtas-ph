@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:disaster_awareness_app/widgets/profile_picture_widget.dart';
+import 'package:disaster_awareness_app/services/guest_service.dart';
+import 'package:disaster_awareness_app/services/auth_service.dart';
 
 typedef EditCallback = void Function();
 
@@ -18,6 +20,212 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final GuestService _guestService = GuestService();
+  bool _isGuest = false;
+  bool _isLoading = true;
+  Map<String, dynamic>? _guestData;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileMode();
+  }
+
+  /// Unified guest detection: checks both Firebase auth and GuestService
+  Future<void> _loadProfileMode() async {
+    try {
+      // Primary check: Firebase auth anonymous status
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final isAnonymous = currentUser?.isAnonymous ?? false;
+
+      if (!isAnonymous) {
+        // Not anonymous in Firebase - definitely not a guest
+        setState(() {
+          _isGuest = false;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Secondary check: verify guest session in GuestService
+      final isGuestInService = await _guestService.isGuestMode();
+
+      if (isGuestInService) {
+        final guestLocation = await _guestService.getGuestLocation();
+        if (mounted) {
+          setState(() {
+            _isGuest = true;
+            _guestData = guestLocation;
+            _isLoading = false;
+          });
+        }
+      } else {
+        // Inconsistency: anonymous in Firebase but not in GuestService
+        // Treat as regular user (session may have expired)
+        if (mounted) {
+          setState(() {
+            _isGuest = false;
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading profile mode: $e');
+      if (mounted) {
+        setState(() {
+          _isGuest = false;
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _exitGuestMode() async {
+    try {
+      final authService = AuthService();
+      
+      // Clear guest session from both GuestService and Firebase Auth
+      await _guestService.disableGuestMode();
+      await authService.signOut();
+
+      if (!mounted) return;
+
+      // Navigate back to home and show confirmation
+      Navigator.of(context).popUntil((route) => route.isFirst);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Guest mode disabled. Please sign up or log in.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      debugPrint('Error exiting guest mode: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error disabling guest mode: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildGuestProfile(ThemeData theme) {
+    final location = _guestData?['location'] as String? ?? 'Location not set';
+    final latitude = (_guestData?['latitude'] as num?)?.toDouble();
+    final longitude = (_guestData?['longitude'] as num?)?.toDouble();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Profile', style: theme.textTheme.headlineMedium),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              color: theme.colorScheme.surfaceVariant.withOpacity(0.2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 36),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Guest User',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Limited access mode',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Current Location',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            location,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          if (latitude != null && longitude != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                'Lat: ${latitude.toStringAsFixed(4)}, Lng: ${longitude.toStringAsFixed(4)}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withOpacity(0.6),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Create an account to save your profile, post in the community, and access all features.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _exitGuestMode,
+              icon: const Icon(Icons.login),
+              label: const Text('Sign Up / Log In'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'You can continue viewing alerts, hotlines, and news while in guest mode.',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Edit User Name Dialog
   void _editUserName(BuildContext context, String currentName) {
     final TextEditingController controller = TextEditingController(text: currentName);
@@ -284,13 +492,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
     final theme = Theme.of(context);
 
-    if (user == null) {
-      return const Center(child: Text("No user logged in"));
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Profile', style: theme.textTheme.headlineMedium),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
+    // Show guest profile if in guest mode
+    if (_isGuest) {
+      return _buildGuestProfile(theme);
+    }
+
+    // Get current Firebase user
+    final user = FirebaseAuth.instance.currentUser;
+
+    // No user and not guest - show sign-in prompt
+    if (user == null || user.isAnonymous) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Profile', style: theme.textTheme.headlineMedium),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person_outline, size: 64, color: theme.colorScheme.primary.withOpacity(0.3)),
+              const SizedBox(height: 16),
+              const Text('Please sign in to view your profile'),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                child: const Text('Back to Home'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Authenticated user - show full profile with ProfilePictureWidget
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
       builder: (context, snapshot) {
@@ -335,7 +580,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Profile Picture Widget
+                // Profile Picture Widget - Only for authenticated users
                 ProfilePictureWidget(
                   onPictureUpdated: () {
                     setState(() {});

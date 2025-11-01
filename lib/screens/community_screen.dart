@@ -6,7 +6,6 @@ import 'package:disaster_awareness_app/screens/user_service.dart';
 import 'package:disaster_awareness_app/services/location_distance_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:cached_network_image/cached_network_image.dart';
-// ⭐ 1. Import the new detail screen
 import 'package:disaster_awareness_app/screens/post_detail_screen.dart';
 
 class CommunityScreen extends StatefulWidget {
@@ -55,7 +54,21 @@ class _CommunityScreenState extends State<CommunityScreen> {
     }
   }
 
-  void _showCreatePostDialog() {
+  void _showCreatePostDialog() async {
+    // Check if user is guest
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser?.isAnonymous ?? false) {
+      // Guests cannot create posts
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sign in to create posts in the community'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     String selectedCategory = 'other';
@@ -346,10 +359,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showCreatePostDialog,
-        backgroundColor: const Color(0xFFb91c1c),
+        onPressed: (FirebaseAuth.instance.currentUser?.isAnonymous ?? false)
+            ? null  // Disable for guests
+            : _showCreatePostDialog,
+        backgroundColor: (FirebaseAuth.instance.currentUser?.isAnonymous ?? false)
+            ? Colors.grey  // Grey out for guests
+            : const Color(0xFFb91c1c),
         icon: const Icon(Icons.add),
-        label: const Text('New Post'),
+        label: (FirebaseAuth.instance.currentUser?.isAnonymous ?? false)
+            ? const Text('Sign in to Post')
+            : const Text('New Post'),
       ),
       body: Column(
         children: [
@@ -498,7 +517,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
   }
 
   Widget _buildPostCard(String postId, Map<String, dynamic> data) {
-    final theme = Theme.of(context); // Get theme from State
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     final isLiked =
         (data['likedBy'] as List?)?.contains(currentUserId) ?? false;
@@ -621,6 +639,42 @@ class _CommunityScreenState extends State<CommunityScreen> {
                       ),
                     ),
                   ),
+                  IconButton(
+                    icon: Icon(
+                      isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: isLiked ? Colors.red : Colors.white70,
+                    ),
+                    onPressed: () async {
+                      // Check if user is guest
+                      final currentUser = FirebaseAuth.instance.currentUser;
+                      if (currentUser?.isAnonymous ?? false) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Sign in to like posts'),
+                            backgroundColor: Colors.orange,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                        return;
+                      }
+
+                      try {
+                        await _communityService.toggleLike(postId);
+                      } catch (e) {
+                        // Extract guest-specific error messages
+                        String errorMessage = 'Error: $e';
+                        if (e.toString().contains('Guests cannot')) {
+                          errorMessage = 'Sign in to like posts';
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(errorMessage),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -645,22 +699,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  IconButton(
-                    icon: Icon(
-                      isLiked ? Icons.favorite : Icons.favorite_border,
-                      color: isLiked ? Colors.red : Colors.white70,
-                    ),
-                    onPressed: () async {
-                      try {
-                        await _communityService.toggleLike(postId);
-                      } catch (e) {
-                        if (mounted)
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                      }
-                    },
-                  ),
                   Text(
                     '${data['likes'] ?? 0}',
                     style: const TextStyle(color: Colors.white70),
@@ -687,10 +725,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
                           Icons.comment_outlined,
                           color: Colors.white70,
                           size: 20,
-                        ), // smaller icon
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          '$commentCount', // ⭐ Use commentCount
+                          '$commentCount',
                           style: const TextStyle(color: Colors.white70),
                         ),
                       ],

@@ -4,7 +4,7 @@ import 'signup_page.dart';
 import 'auth_textfield.dart';
 import 'forgot_password_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// home screen
+import '../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,6 +16,8 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -25,21 +27,23 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _login() async {
+    setState(() => _isLoading = true);
+    
     try {
-      // Attempt to sign in
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
       if (!mounted) return;
-      //  Login successful; AuthWrapper will rebuild to Location/ Home automatically.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful!')),
       );
-      // Return to the root so AuthWrapper can rebuild to next screen
+      // Wait a moment for snackbar to show, then navigate back to let AuthWrapper handle it
+      await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      // Pop back to AuthWrapper which will detect the logged-in user
+      Navigator.of(context).pop();
     } on FirebaseAuthException catch (e) {
       String message = '';
       if (e.code == 'user-not-found') {
@@ -56,11 +60,44 @@ class _LoginPageState extends State<LoginPage> {
         message = 'Auth error (${e.code}): ${e.message ?? 'unknown'}';
       }
 
-      //  Show error message
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message)),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _continueAsGuest() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      await _authService.signInAsGuest();
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Continuing as guest - limited features available'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      // Wait a moment for snackbar to show, then navigate back to let AuthWrapper handle it
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      // Pop back to AuthWrapper which will detect the guest user
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -97,8 +134,27 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 24.0),
                 ElevatedButton(
-                  onPressed: _login,
-                  child: const Text('SIGN IN', style: TextStyle(fontSize: 16)),
+                  onPressed: _isLoading ? null : _login,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('SIGN IN', style: TextStyle(fontSize: 16)),
+                ),
+                const SizedBox(height: 16.0),
+                // Guest Login Button
+                OutlinedButton(
+                  onPressed: _isLoading ? null : _continueAsGuest,
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF2469CD)),
+                    foregroundColor: Color(0xFF2469CD),
+                  ),
+                  child: const Text(
+                    'CONTINUE AS GUEST',
+                    style: TextStyle(fontSize: 16),
+                  ),
                 ),
                 const SizedBox(height: 16.0),
                 Center(

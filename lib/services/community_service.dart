@@ -22,6 +22,12 @@ class CommunityService {
       throw Exception('User not logged in');
     }
 
+    // Prevent guest users from creating posts
+    final currentUser = _auth.currentUser;
+    if (currentUser?.isAnonymous ?? false) {
+      throw Exception('Guests cannot create posts. Please sign in to share with the community.');
+    }
+
     try {
       // Get user's name and profile picture from users collection
       final userDoc =
@@ -100,6 +106,12 @@ class CommunityService {
       throw Exception('User not logged in');
     }
 
+    // Prevent guest users from liking posts
+    final currentUser = _auth.currentUser;
+    if (currentUser?.isAnonymous ?? false) {
+      throw Exception('Guests cannot like posts. Please sign in to interact with the community.');
+    }
+
     try {
       final postRef = _firestore.collection('community_posts').doc(postId);
       final postDoc = await postRef.get();
@@ -137,6 +149,12 @@ class CommunityService {
   }) async {
     if (currentUserId == null) {
       throw Exception('User not logged in');
+    }
+
+    // Prevent guest users from adding comments
+    final currentUser = _auth.currentUser;
+    if (currentUser?.isAnonymous ?? false) {
+      throw Exception('Guests cannot comment. Please sign in to join the conversation.');
     }
 
     try {

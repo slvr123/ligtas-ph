@@ -105,12 +105,17 @@ class AuthWrapper extends StatelessWidget {
 class LocationChecker extends StatelessWidget {
   const LocationChecker({super.key});
 
+  Future<Map<String, dynamic>?> _getLocationWithDelay() async {
+    // Add a 1 second delay for smooth loading animation
+    await Future.delayed(const Duration(seconds: 1));
+    final UserService userService = UserService();
+    return userService.getUserLocation();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final UserService userService = UserService();
-
     return FutureBuilder<Map<String, dynamic>?>(
-      future: userService.getUserLocation(),
+      future: _getLocationWithDelay(),
       builder: (context, snapshot) {
         // Loading
         if (snapshot.connectionState == ConnectionState.waiting) {

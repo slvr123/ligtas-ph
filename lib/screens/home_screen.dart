@@ -14,6 +14,8 @@ import 'package:disaster_awareness_app/services/alert_service.dart';
 import 'location_setup_screen.dart';
 import 'package:disaster_awareness_app/screens/profile_screen.dart';
 import 'package:disaster_awareness_app/screens/settings_screen.dart';
+import 'package:disaster_awareness_app/screens/user_service.dart';
+import 'package:disaster_awareness_app/screens/login_page.dart';
 
 class HomeScreen extends StatefulWidget {
   final String location;
@@ -116,14 +118,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (shouldLogout == true) {
       try {
+        // Clear guest data if needed
+        UserService.clearGuestData();
+
+        // Sign out from Firebase
         await FirebaseAuth.instance.signOut();
 
         if (context.mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-          ScaffoldMessenger.of(context).clearSnackBars();
+          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Logged out')),
+            const SnackBar(
+              content: Text('Logged out successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
           );
+
+          // Wait a moment for snackbar to be visible, then navigate to login
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (context.mounted) {
+            // Navigate to login and clear navigation stack
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const LoginPage()),
+              (route) => false,
+            );
+          }
         }
       } catch (e) {
         if (context.mounted) {
