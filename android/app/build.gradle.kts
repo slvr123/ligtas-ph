@@ -25,7 +25,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.my_clean_app"
-        minSdk = flutter.minSdkVersion  // ← Change this from flutter.minSdkVersion to 23
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
