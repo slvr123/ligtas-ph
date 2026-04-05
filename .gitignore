@@ -44,17 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 # Firebase / Google API config files
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+android/app/src/google-services.json
+ios/Runner/Google.Service-Info.plist
 
 # Environment and local secrets
-<<<<<<< Updated upstream
 .env
-=======
-.env
->>>>>>> Stashed changes
+.env.*
