@@ -47,12 +47,16 @@ app.*.map.json
 # Firebase / Google API config files
 firebase.json
 lib/firebase_options.dart
-android/app/src/google-services.json
 android/app/google-services.json
+android/app/src/google-services.json
+ios/Runner/GoogleService-Info.plist
 ios/Runner/Google.Service-Info.plist
+
+# Local git artifact folders
+ligtas-ph.git/
+ligtas-ph.git.bfg-report/
+*.bfg-report/
 
 # Environment and local secrets
 .env
 .env.*
-
-firebase.json
